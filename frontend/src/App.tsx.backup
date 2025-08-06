@@ -1,0 +1,22 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
+import Dashboard from './components/Dashboard';
+import Analytics from './pages/Analytics';
+import EventCalendar from './components/EventCalendar';
+
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/calendar" element={<EventCalendar />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
