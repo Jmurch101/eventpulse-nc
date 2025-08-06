@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Event } from '../types/Event';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
