@@ -15,7 +15,7 @@ const Analytics: React.FC = () => {
                 to="/"
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
               >
-                <ArrowLeftIcon className="h-5 w-5" />
+                <ArrowLeftIcon style={{ width: 20, height: 20, flex: '0 0 auto' }} className="text-gray-500" />
                 <span>Back to Dashboard</span>
               </Link>
             </div>
