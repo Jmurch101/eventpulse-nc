@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Event } from '../types/Event';
@@ -17,37 +17,91 @@ interface NCMapProps {
   events: Event[];
 }
 
-const NC_CENTER: [number, number] = [35.782169, -80.793457];
+// Focus on the Triangle area
+const TRIANGLE_CENTER: [number, number] = [35.88, -78.85];
+
+function formatCountdown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+const FitToMarkers: React.FC<{ positions: Array<[number, number]> }> = ({ positions }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length === 0) return;
+    const bounds = L.latLngBounds(positions);
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+  }, [positions, map]);
+  return null;
+};
 
 export const NCMap: React.FC<NCMapProps> = ({ events }) => {
-  const validEvents = useMemo(
-    () =>
-      events.filter(e =>
-        Number.isFinite(e.latitude) &&
-        Number.isFinite(e.longitude) &&
-        Math.abs(e.latitude) <= 90 &&
-        Math.abs(e.longitude) <= 180
-      ),
-    [events]
-  );
+  const [tick, setTick] = useState(0);
+
+  // Refresh countdowns periodically
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const now = useMemo(() => Date.now(), [tick]);
+
+  const validEvents = useMemo(() => {
+    return events.filter(e =>
+      Number.isFinite(e.latitude) &&
+      Number.isFinite(e.longitude) &&
+      Math.abs(e.latitude) <= 90 &&
+      Math.abs(e.longitude) <= 180
+    );
+  }, [events]);
+
+  const liveOrSoonEvents = useMemo(() => {
+    const ONE_HOUR = 60 * 60 * 1000;
+    return validEvents.filter(e => {
+      const start = new Date(e.start_date).getTime();
+      const end = new Date(e.end_date).getTime();
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+      const isLive = start <= now && now < end;
+      const isSoon = start > now && start - now <= ONE_HOUR;
+      return isLive || isSoon;
+    });
+  }, [validEvents, now]);
+
+  const positions: Array<[number, number]> = liveOrSoonEvents.map(ev => [ev.latitude, ev.longitude]);
 
   return (
     <div style={{ height: 480, width: '100%', borderRadius: 12, overflow: 'hidden' }}>
-      <MapContainer center={NC_CENTER} zoom={7} style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={TRIANGLE_CENTER} zoom={10} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {validEvents.map(ev => (
+        <FitToMarkers positions={positions} />
+        {liveOrSoonEvents.map(ev => {
+          const start = new Date(ev.start_date).getTime();
+          const end = new Date(ev.end_date).getTime();
+          const isLive = start <= now && now < end;
+          const ms = isLive ? end - now : start - now;
+          const label = isLive ? `Live • ends in ${formatCountdown(ms)}` : `Starts in ${formatCountdown(ms)}`;
+          return (
           <Marker key={ev.id} position={[ev.latitude, ev.longitude] as [number, number]}>
             <Popup>
               <div style={{ maxWidth: 240 }}>
                 <div style={{ fontWeight: 700 }}>{ev.title}</div>
                 <div style={{ color: '#4b5563' }}>{ev.location_name}</div>
+                <div style={{ marginTop: 6, fontSize: 12, color: isLive ? '#059669' : '#2563eb', fontWeight: 600 }}>
+                  {label}
+                </div>
               </div>
             </Popup>
           </Marker>
-        ))}
+          );
+        })}
       </MapContainer>
     </div>
   );
