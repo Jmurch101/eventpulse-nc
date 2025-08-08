@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { Event } from '../types/Event';
-import { format } from 'date-fns';
 
 interface HourlyHeatmapProps {
   events: Event[];
