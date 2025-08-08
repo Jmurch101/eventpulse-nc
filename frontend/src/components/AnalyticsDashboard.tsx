@@ -168,12 +168,15 @@ const AnalyticsDashboard: React.FC = () => {
 
       {/* Status + Presented By */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+          <div className="lg:col-span-2">
           <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
             <p className="text-sm text-blue-800">
-              Analytics collection is currently limited on the public demo. Production metrics will populate
-              after launch with privacy-friendly, aggregated tracking. In the meantime, charts below use
-              representative sample data to illustrate the experience.
+              EventPulse Analytics summarizes the platform at a glance: total events, active users,
+              events by type and location, most‑viewed events, recent activity, and performance metrics.
+              Data is aggregated from official North Carolina sources including state agencies (DOT, DHHS,
+              Commerce), county and city governments (Raleigh, Durham, Chapel Hill, Wake County), and
+              universities (UNC System campuses, NC State, Duke, and others). Charts reflect the current
+              dataset in the backend and update as new data is ingested.
             </p>
           </div>
         </div>
