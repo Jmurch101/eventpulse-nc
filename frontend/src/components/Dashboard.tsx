@@ -105,6 +105,9 @@ const Dashboard: React.FC = () => {
       <p className="text-center text-gray-600 mb-8">
         Never Miss What Matters in North Carolina
       </p>
+      {loading && (
+        <div className="text-center text-gray-500 mb-4">Loading events…</div>
+      )}
       {/* Toggle Buttons */}
       {/* Main Panels */}
       {view === 'events' ? (
