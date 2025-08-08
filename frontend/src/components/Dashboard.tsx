@@ -4,6 +4,8 @@ import AdvancedSearch from './AdvancedSearch';
 import CategoryBubbles from './CategoryBubbles';
 import InteractiveHeatMap from './InteractiveHeatMap';
 import NCMap from './NCMap';
+import HourlyHeatmap from './HourlyHeatmap';
+import BubbleCluster from './BubbleCluster';
 import { format } from 'date-fns';
 import { eventService } from '../services/api';
 import { Event } from '../types/Event';
@@ -76,6 +78,14 @@ const Dashboard: React.FC = () => {
     return allEvents.filter(ev => selectedEventTypes.includes(ev.event_type));
   }, [allEvents, selectedEventTypes]);
 
+  const countsByType = useMemo(() => {
+    const m: Record<string, number> = {};
+    (selectedEventTypes.length > 0 ? filteredEvents : allEvents).forEach(ev => {
+      m[ev.event_type] = (m[ev.event_type] || 0) + 1;
+    });
+    return m;
+  }, [allEvents, filteredEvents, selectedEventTypes]);
+
   return (
     <div className="p-6 max-w-6xl mx-auto font-sans">
       {/* Top Navigation */}
@@ -124,11 +134,13 @@ const Dashboard: React.FC = () => {
             }}
           />
           <div className="flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/3">
+            <div className="md:w-1/3 space-y-4">
               <CategoryBubbles
                 onCategorySelect={handleCategorySelect}
                 selectedCategory={selectedCategory}
+                countsByType={countsByType}
               />
+              <BubbleCluster countsByType={countsByType} onSelect={(t) => setSelectedEventTypes([t])} />
             </div>
             <div className="md:flex-1">
               <InteractiveHeatMap
@@ -136,6 +148,9 @@ const Dashboard: React.FC = () => {
                 onOpenMapForDate={(d) => setMapOverlayDate(d)}
                 selectedEventTypes={selectedEventTypes}
               />
+              <div className="mt-4">
+                <HourlyHeatmap events={filteredEvents} />
+              </div>
             </div>
           </div>
         </div>
