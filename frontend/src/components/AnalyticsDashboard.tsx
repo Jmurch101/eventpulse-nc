@@ -146,6 +146,32 @@ const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Status + Presented By */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
+            <p className="text-sm text-blue-800">
+              Analytics collection is currently limited on the public demo. Production metrics will populate
+              after launch with privacy-friendly, aggregated tracking. In the meantime, charts below use
+              representative sample data to illustrate the experience.
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center gap-3">
+          <div className="text-right">
+            <div className="text-xs uppercase tracking-wide text-gray-500">Presented by</div>
+            <div className="text-sm font-semibold text-gray-800">Intelligent Systems Lab</div>
+            <div className="text-xs text-gray-600">Fayetteville State University</div>
+          </div>
+          <img
+            src="/presented-by.png"
+            alt="Fayetteville State University Intelligent Systems Laboratory"
+            className="h-12 w-auto object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+        </div>
+      </div>
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
