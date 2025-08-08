@@ -15,6 +15,7 @@ L.Marker.prototype.options.icon = DefaultIcon as any;
 
 interface NCMapProps {
   events: Event[];
+  mode?: 'live' | 'all';
 }
 
 // Focus on the Triangle area
@@ -40,16 +41,16 @@ const FitToMarkers: React.FC<{ positions: Array<[number, number]> }> = ({ positi
   return null;
 };
 
-export const NCMap: React.FC<NCMapProps> = ({ events }) => {
-  const [tick, setTick] = useState(0);
+export const NCMap: React.FC<NCMapProps> = ({ events, mode = 'live' }) => {
+  const [, forceTick] = useState(0);
 
   // Refresh countdowns periodically
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 30000);
+    const id = setInterval(() => forceTick(t => t + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
-  const now = useMemo(() => Date.now(), [tick]);
+  const now = Date.now();
 
   const validEvents = useMemo(() => {
     return events.filter(e =>
@@ -72,7 +73,8 @@ export const NCMap: React.FC<NCMapProps> = ({ events }) => {
     });
   }, [validEvents, now]);
 
-  const positions: Array<[number, number]> = liveOrSoonEvents.map(ev => [ev.latitude, ev.longitude]);
+  const displayEvents = mode === 'all' ? validEvents : liveOrSoonEvents;
+  const positions: Array<[number, number]> = displayEvents.map(ev => [ev.latitude, ev.longitude]);
 
   return (
     <div style={{ height: 480, width: '100%', borderRadius: 12, overflow: 'hidden' }}>
@@ -82,21 +84,25 @@ export const NCMap: React.FC<NCMapProps> = ({ events }) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitToMarkers positions={positions} />
-        {liveOrSoonEvents.map(ev => {
+        {displayEvents.map(ev => {
           const start = new Date(ev.start_date).getTime();
           const end = new Date(ev.end_date).getTime();
           const isLive = start <= now && now < end;
           const ms = isLive ? end - now : start - now;
-          const label = isLive ? `Live • ends in ${formatCountdown(ms)}` : `Starts in ${formatCountdown(ms)}`;
+          const label = mode === 'all'
+            ? (isLive ? 'Live' : '')
+            : (isLive ? `Live • ends in ${formatCountdown(ms)}` : `Starts in ${formatCountdown(ms)}`);
           return (
           <Marker key={ev.id} position={[ev.latitude, ev.longitude] as [number, number]}>
             <Popup>
               <div style={{ maxWidth: 240 }}>
                 <div style={{ fontWeight: 700 }}>{ev.title}</div>
                 <div style={{ color: '#4b5563' }}>{ev.location_name}</div>
-                <div style={{ marginTop: 6, fontSize: 12, color: isLive ? '#059669' : '#2563eb', fontWeight: 600 }}>
-                  {label}
-                </div>
+                {label && (
+                  <div style={{ marginTop: 6, fontSize: 12, color: isLive ? '#059669' : '#2563eb', fontWeight: 600 }}>
+                    {label}
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
