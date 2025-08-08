@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-08-04T20:27:15.549850",
+  "results": {
+    "Frontend Accessibility": true,
+    "Backend API": true
+  },
+  "passed": 2,
+  "total": 2,
+  "success_rate": "2/2",
+  "comprehensive_fixes_applied": [
+    "Header search icon: 1.25rem \u2192 1rem",
+    "CategoryBubbles icons: 1.25rem \u2192 1rem, 2rem \u2192 1.5rem",
+    "CategoryBubbles headings: 1.25rem \u2192 1rem, 1.75rem \u2192 1.5rem",
+    "EventDetailsModal emojis: 1.25rem \u2192 1rem",
+    "EventDetailsModal headings: 1.5rem \u2192 1.25rem",
+    "EventMap emoji: 1.5rem \u2192 1rem",
+    "EventMap event type icons: 1.25rem \u2192 1rem",
+    "InteractiveHeatMap headings: 1.75rem \u2192 1.5rem, 1.5rem \u2192 1.25rem",
+    "All loading spinners: appropriately sized",
+    "All navigation arrows: appropriately sized"
+  ]
+}

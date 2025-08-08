@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-08-04T20:32:16.964982",
+  "results": {
+    "Frontend Accessibility": true,
+    "Backend API": true
+  },
+  "passed": 2,
+  "total": 2,
+  "success_rate": "2/2",
+  "icon_replacements_applied": [
+    "University Events: \ud83c\udf93 \u2192 \ud83d\udcda (smaller book icon)",
+    "Government Meetings: \ud83c\udfdb\ufe0f \u2192 \ud83c\udfdb (smaller building icon)",
+    "School Holidays: \ud83c\udf92 \u2192 \ud83d\udcc5 (calendar icon)",
+    "Official Holidays: \ud83c\udf89 \u2192 \ud83c\udf8a (smaller celebration icon)",
+    "Workshops: \ud83d\udd27 \u2192 \u2699\ufe0f (smaller gear icon)",
+    "Tech Events: \ud83d\udcbb \u2192 \u26a1 (lightning bolt icon)",
+    "Community Events: \ud83e\udd1d \u2192 \ud83d\udc65 (group icon)",
+    "Event Details Modal: All icons reduced to 0.875rem",
+    "Event Type Icons: Updated across all components"
+  ]
+}

@@ -33,10 +33,21 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
           console.log(`✅ Loaded ${data.length} total events for heatmap`);
         }
         
-        // Apply category filter if provided
+        // Apply simple validation and then category filter
+        const isValid = (e: Event) => {
+          const s = new Date(e.start_date).getTime();
+          const en = new Date(e.end_date).getTime();
+          if (!Number.isFinite(s) || !Number.isFinite(en)) return false;
+          if (en <= s) return false;
+          const hours = (en - s) / (1000 * 60 * 60);
+          if (hours > 14) return false;
+          return true;
+        };
+
+        const validated = data.filter(isValid);
         const filteredData = selectedEventTypes && selectedEventTypes.length > 0
-          ? data.filter(e => selectedEventTypes!.includes(e.event_type))
-          : data;
+          ? validated.filter(e => selectedEventTypes!.includes(e.event_type))
+          : validated;
         setEvents(filteredData);
         
         // Calculate event counts for each date

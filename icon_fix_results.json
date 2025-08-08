@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-08-04T20:21:26.595486",
+  "success": true,
+  "fixes_applied": [
+    "Header search icon: 1.25rem \u2192 1rem",
+    "EventList loading spinner: 3rem \u2192 1.5rem",
+    "EventMap emoji: 3rem \u2192 1.5rem",
+    "DayMapModal calendar: h-8 w-8 \u2192 h-6 w-6",
+    "EventDetailsModal icon: 2.5rem \u2192 2rem",
+    "InteractiveHeatMap arrows: 1.5rem \u2192 1.25rem",
+    "EventList arrow: 1.25rem \u2192 1rem",
+    "CategoryBubbles arrow: 1.25rem \u2192 1rem"
+  ]
+}
