@@ -196,7 +196,7 @@ const AnalyticsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <CalendarIcon className="h-4 w-4 text-blue-600" />
+            <CalendarIcon className="h-3 w-3 text-blue-600" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Events</p>
               <p className="text-2xl font-bold text-gray-900">{analyticsData.totalEvents.toLocaleString()}</p>
@@ -206,7 +206,7 @@ const AnalyticsDashboard: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <UsersIcon className="h-4 w-4 text-green-600" />
+            <UsersIcon className="h-3 w-3 text-green-600" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Active Users</p>
               <p className="text-2xl font-bold text-gray-900">{analyticsData.activeUsers.toLocaleString()}</p>
@@ -216,7 +216,7 @@ const AnalyticsDashboard: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <ArrowTrendingUpIcon className="h-4 w-4 text-purple-600" />
+            <ArrowTrendingUpIcon className="h-3 w-3 text-purple-600" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Growth Rate</p>
               <p className="text-2xl font-bold text-gray-900">+12.5%</p>
@@ -226,7 +226,7 @@ const AnalyticsDashboard: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <EyeIcon className="h-4 w-4 text-orange-600" />
+            <EyeIcon className="h-3 w-3 text-orange-600" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Page Views</p>
               <p className="text-2xl font-bold text-gray-900">45.2K</p>
@@ -260,7 +260,7 @@ const AnalyticsDashboard: React.FC = () => {
             {Object.entries(analyticsData.eventsByLocation).map(([location, count]) => (
               <div key={location} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <MapPinIcon className="h-4 w-4 text-gray-400" />
+                  <MapPinIcon className="h-3 w-3 text-gray-400" />
                   <span className="text-sm font-medium text-gray-700">{location}</span>
                 </div>
                 <span className="text-sm text-gray-600">{count.toLocaleString()}</span>
@@ -284,7 +284,7 @@ const AnalyticsDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <EyeIcon className="h-4 w-4 text-gray-400" />
+                <EyeIcon className="h-3 w-3 text-gray-400" />
                 <span className="text-sm text-gray-600">{event.views.toLocaleString()}</span>
               </div>
             </div>
@@ -329,7 +329,7 @@ const AnalyticsDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <ClockIcon className="h-4 w-4 text-gray-400" />
+                <ClockIcon className="h-3 w-3 text-gray-400" />
                 <span className="text-xs text-gray-600">
                   {new Date(activity.timestamp).toLocaleTimeString()}
                 </span>
