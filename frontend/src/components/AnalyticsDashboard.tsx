@@ -109,18 +109,38 @@ const AnalyticsDashboard: React.FC = () => {
     return colors[eventType as keyof typeof colors] || 'bg-gray-500';
   };
 
-  if (loading) {
+  if (loading || !analyticsData) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+      <div className="space-y-6">
+        {/* Status + Presented By (always visible) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm text-blue-800">
+                Analytics collection is currently limited on the public demo. Production metrics will populate
+                after launch with privacy-friendly, aggregated tracking. In the meantime, charts will appear here.
+              </p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center gap-3">
+            <div className="text-right">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Presented by</div>
+              <div className="text-sm font-semibold text-gray-800">Intelligent Systems Lab</div>
+              <div className="text-xs text-gray-600">Fayetteville State University</div>
+            </div>
+            <img
+              src={`${process.env.PUBLIC_URL}/presented-by.png`}
+              alt="Fayetteville State University Intelligent Systems Laboratory"
+              className="h-12 w-auto object-contain"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        </div>
 
-  if (!analyticsData) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-600">Unable to load analytics data</p>
+        {/* Loading placeholder */}
+        <div className="flex justify-center items-center h-48">
+          <div className="text-gray-600">Loading analytics…</div>
+        </div>
       </div>
     );
   }
