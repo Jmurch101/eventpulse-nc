@@ -15,6 +15,7 @@ const Dashboard: React.FC = () => {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [mapMode, setMapMode] = useState<'live' | 'all'>('live');
   const navigate = useNavigate();
 
   // categories drive selectedEventTypes; no modal needed
@@ -27,6 +28,8 @@ const Dashboard: React.FC = () => {
   const handleDateSelect = (date: Date) => {
     navigate(`/day/${format(date, 'yyyy-MM-dd')}`);
   };
+
+  const [mapOverlayDate, setMapOverlayDate] = useState<Date | null>(null);
 
   const handleSearch = (filters: any) => {
     setSelectedEventTypes(filters.eventTypes);
@@ -130,6 +133,7 @@ const Dashboard: React.FC = () => {
             <div className="md:flex-1">
               <InteractiveHeatMap
                 onDateSelect={handleDateSelect}
+                onOpenMapForDate={(d) => setMapOverlayDate(d)}
                 selectedEventTypes={selectedEventTypes}
               />
             </div>
@@ -141,6 +145,7 @@ const Dashboard: React.FC = () => {
           <div className="md:flex-1">
             <InteractiveHeatMap
               onDateSelect={handleDateSelect}
+              onOpenMapForDate={(d) => setMapOverlayDate(d)}
               selectedEventTypes={['holiday']}
             />
           </div>
@@ -154,14 +159,44 @@ const Dashboard: React.FC = () => {
               setSelectedCategory('all');
             }}
           />
+          {/* Map view controls */}
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-sm text-gray-600">Map filter:</span>
+            <button
+              onClick={() => setMapMode('live')}
+              className={`px-3 py-1 rounded text-sm ${mapMode === 'live' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
+            >
+              Live / Next Hour
+            </button>
+            <button
+              onClick={() => setMapMode('all')}
+              className={`px-3 py-1 rounded text-sm ${mapMode === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
+            >
+              All Events
+            </button>
+          </div>
           {error ? (
             <div className="text-center text-red-600">{error}</div>
           ) : (
-            <NCMap events={filteredEvents} />
+            <NCMap events={filteredEvents} mode={mapMode} />
           )}
         </div>
       )}
       {/* no modal: use separate page for day events */}
+      {mapOverlayDate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setMapOverlayDate(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-4 w-11/12 max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-lg font-semibold">Events on {format(mapOverlayDate, 'MMMM d, yyyy')}</div>
+              <button className="text-gray-600 hover:text-gray-900" onClick={() => setMapOverlayDate(null)}>Close</button>
+            </div>
+            <NCMap
+              events={filteredEvents.filter(ev => format(new Date(ev.start_date), 'yyyy-MM-dd') === format(mapOverlayDate, 'yyyy-MM-dd'))}
+              mode={'all'}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

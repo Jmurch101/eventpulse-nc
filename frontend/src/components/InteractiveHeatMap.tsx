@@ -6,10 +6,11 @@ import { Event } from '../types/Event';
 interface InteractiveHeatMapProps {
   selectedDate?: Date;
   onDateSelect: (date: Date) => void;
+  onOpenMapForDate?: (date: Date) => void; // right-click handler
   selectedEventTypes?: string[];
 }
 
-const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, onDateSelect, selectedEventTypes }) => {
+const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, onDateSelect, onOpenMapForDate, selectedEventTypes }) => {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date())); // current month
   const [events, setEvents] = useState<Event[]>([]);
   const [eventCounts, setEventCounts] = useState<{ [key: string]: number }>({});
@@ -251,6 +252,11 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
                   position: 'relative',
                   transition: 'all 0.2s ease-in-out',
                   transform: isSelected ? 'scale(1.05)' : 'none'
+                }}
+                onContextMenu={(e) => {
+                  if (!isCurrentMonth) return;
+                  e.preventDefault();
+                  if (onOpenMapForDate) onOpenMapForDate(day);
                 }}
                 onMouseEnter={(e) => {
                   if (isCurrentMonth && !isSelected) {

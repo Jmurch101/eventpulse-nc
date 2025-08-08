@@ -4,6 +4,7 @@ import { CategoryBubble } from '../types/CategoryBubble';
 interface CategoryBubblesProps {
   onCategorySelect: (category: CategoryBubble) => void;
   selectedCategory: string;
+  countsByType?: Record<string, number>; // e.g., { academic: 10, government: 5 }
 }
 
 const categories: CategoryBubble[] = [
@@ -81,7 +82,19 @@ const categories: CategoryBubble[] = [
   }
 ];
 
-const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, selectedCategory }) => {
+const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, selectedCategory, countsByType }) => {
+  const totalCount = countsByType
+    ? Object.values(countsByType).reduce((a, b) => a + b, 0)
+    : 0;
+
+  const getCategoryCount = (category: CategoryBubble) => {
+    if (!countsByType) return 0;
+    if (category.id === 'all' || category.eventTypes.length === 0) return totalCount;
+    return category.eventTypes.reduce((sum, t) => sum + (countsByType[t] || 0), 0);
+  };
+
+  const maxCount = countsByType ? Math.max(1, ...categories.map(getCategoryCount)) : 1;
+
   return (
     <div style={{ padding: '1rem 0' }}>
       <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
@@ -100,7 +113,10 @@ const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, sel
         maxWidth: '1200px',
         margin: '0 auto'
       }}>
-        {categories.map((category) => (
+        {categories.map((category) => {
+          const count = getCategoryCount(category);
+          const scale = countsByType ? 0.9 + 0.4 * (count / maxCount) : 1;
+          return (
           <div
             key={category.id}
             onClick={() => onCategorySelect(category)}
@@ -115,17 +131,17 @@ const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, sel
               boxShadow: selectedCategory === category.id 
                 ? `0 10px 25px -5px ${category.color}40` 
                 : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              transform: selectedCategory === category.id ? 'translateY(-2px)' : 'none'
+              transform: `${selectedCategory === category.id ? 'translateY(-2px)' : 'none'} scale(${scale.toFixed(2)})`
             }}
             onMouseEnter={(e) => {
               if (selectedCategory !== category.id) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.transform = `translateY(-2px) scale(${scale.toFixed(2)})`;
                 e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
               }
             }}
             onMouseLeave={(e) => {
               if (selectedCategory !== category.id) {
-                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.transform = `scale(${scale.toFixed(2)})`;
                 e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
               }
             }}
@@ -176,7 +192,7 @@ const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, sel
                 borderRadius: '0.375rem',
                 fontWeight: '500'
               }}>
-                {category.eventTypes.length} type{category.eventTypes.length !== 1 ? 's' : ''}
+                {countsByType ? `${count.toLocaleString()} events` : `${category.eventTypes.length} type${category.eventTypes.length !== 1 ? 's' : ''}`}
               </span>
               
               <svg 
@@ -193,7 +209,7 @@ const CategoryBubbles: React.FC<CategoryBubblesProps> = ({ onCategorySelect, sel
               </svg>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
