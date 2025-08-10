@@ -169,6 +169,27 @@ app.post('/api/events', async (req, res) => {
     if (!title || !start_date || !end_date) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // Time sanity checks
+    const startMs = Date.parse(start_date);
+    const endMs = Date.parse(end_date);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+    if (endMs <= startMs) {
+      return res.status(400).json({ error: 'End time must be after start time' });
+    }
+    const FOURTEEN_HOURS = 14 * 60 * 60 * 1000;
+    if (endMs - startMs > FOURTEEN_HOURS) {
+      return res.status(400).json({ error: 'Event duration exceeds 14 hours' });
+    }
+
+    // Coordinate sanity checks (optional; allow 0,0 as unknown but discourage)
+    const latOk = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
+    const lonOk = longitude === undefined || (Number.isFinite(Number(longitude)) && Math.abs(Number(longitude)) <= 180);
+    if (!latOk || !lonOk) {
+      return res.status(400).json({ error: 'Invalid latitude/longitude' });
+    }
     
     // Check for existing event with same title and exact same start_date (includes time)
     const checkQuery = `
@@ -244,6 +265,18 @@ app.post('/api/events/batch', async (req, res) => {
       if (!title || !start_date || !end_date) {
         failed++; return resolve();
       }
+
+      // Validate times
+      const sMs = Date.parse(start_date);
+      const eMs = Date.parse(end_date);
+      if (!Number.isFinite(sMs) || !Number.isFinite(eMs) || eMs <= sMs || (eMs - sMs) > (14*60*60*1000)) {
+        failed++; return resolve();
+      }
+
+      // Validate coordinates if present
+      const latOkB = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
+      const lonOkB = longitude === undefined || (Number.isFinite(Number(longitude)) && Math.abs(Number(longitude)) <= 180);
+      if (!latOkB || !lonOkB) { failed++; return resolve(); }
 
       db.get('SELECT id FROM events WHERE title = ? AND start_date = ?', [title, start_date], (err, existing) => {
         if (err) { failed++; return resolve(); }
