@@ -9,7 +9,7 @@ interface HourlyHeatmapProps {
   showHourLabels?: boolean;
 }
 
-const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, defaultCollapsed = false, showHourLabels = true }) => {
+const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, defaultCollapsed = false, showHourLabels = false }) => {
   const [collapsed, setCollapsed] = useState<boolean>(defaultCollapsed);
   const grid = useMemo(() => {
     // 7 days x 24 hours counts
@@ -31,7 +31,13 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
     return '#1e40af';
   };
 
-  const hourHeader = (hr: number) => hr;
+  const hourHeader = (hr: number) => {
+    const h = hr % 24;
+    if (h === 0) return '12 am';
+    if (h < 12) return `${h} am`;
+    if (h === 12) return '12 pm';
+    return `${h - 12} pm`;
+  };
   const cellSize = compact ? 14 : 16;
 
   return (
@@ -51,14 +57,14 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
         <div className="mb-2 text-[10px] text-gray-500">Tip: Left‑click a calendar day to see its events listed below.</div>
       )}
       {!collapsed && (
-        <div className="grid border border-gray-300 rounded" style={{ gridTemplateColumns: `${compact ? '48px repeat(24, minmax(12px, 1fr))' : '56px repeat(24, minmax(14px, 1fr))'}`, gap: 0 }}>
-          <div className="text-[10px] text-gray-600 flex items-center justify-end pr-1 bg-gray-50 border-b border-gray-300">Day</div>
+        <div className="grid border border-gray-300 rounded" style={{ gridTemplateColumns: `${compact ? '64px repeat(24, minmax(12px, 1fr))' : '72px repeat(24, minmax(14px, 1fr))'}`, gap: 0 }}>
+          <div className="text-[10px] text-gray-700 font-medium flex items-center justify-end pr-1 bg-gray-50 border-b border-gray-300">Day</div>
           {Array.from({ length: 24 }).map((_, hr) => (
-            <div key={hr} className="text-[9px] text-center text-gray-700 bg-gray-50 border-b border-l border-gray-300" style={{ lineHeight: `${cellSize}px`, height: cellSize }}>{hourHeader(hr)}</div>
+            <div key={hr} className="text-[9px] text-center text-gray-800 bg-gray-50 border-b border-l border-gray-300" style={{ lineHeight: `${cellSize}px`, height: cellSize }}>{hourHeader(hr)}</div>
           ))}
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
             <React.Fragment key={label}>
-              <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end border-t border-gray-300 bg-white">{label}</div>
+              <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end border-t bg-white" style={{ borderTop: '2px solid #cbd5e1' }}>{label}</div>
               {Array.from({ length: 24 }).map((_, hr) => (
                 <div
                   key={hr}
@@ -67,8 +73,9 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
                   style={{
                     backgroundColor: colorFor(grid[day][hr]),
                     height: cellSize,
-                    borderTop: '1px solid #d1d5db',
-                    borderLeft: '1px solid #d1d5db'
+                    borderTop: '1px solid #cbd5e1',
+                    borderLeft: '1px solid #d1d5e1',
+                    borderRight: '1px solid #e5e7eb'
                   }}
                 >
                   {showHourLabels && (
