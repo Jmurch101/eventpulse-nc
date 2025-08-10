@@ -172,7 +172,7 @@ const Dashboard: React.FC = () => {
                 selectedEventTypes={selectedEventTypes}
               />
               <div className="mt-3">
-                <HourlyHeatmap events={filteredEvents} />
+                <HourlyHeatmap events={filteredEvents} compact defaultCollapsed />
               </div>
             </div>
           </div>
