@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import NCMap from '../components/NCMap';
+import HourlyHeatmap from '../components/HourlyHeatmap';
 
 const DayEventsPage: React.FC = () => {
   const { date } = useParams<{ date: string }>();
@@ -29,23 +30,9 @@ const DayEventsPage: React.FC = () => {
         <Link to="/" className="text-blue-500 hover:underline">Back to Dashboard</Link>
       </div>
       {/* Hourly heat grid */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h2 className="text-lg font-semibold mb-2">Hourly Activity</h2>
-        <div className="grid grid-cols-6 gap-1">
-          {Array.from({ length: 24 }).map((_, hr) => {
-            const count = events.filter(ev => {
-              const d = new Date(ev.start_date);
-              return format(d, 'yyyy-MM-dd') === date && d.getHours() === hr;
-            }).length;
-            const intensity = count === 0 ? '#f3f4f6' : count <= 2 ? '#bfdbfe' : count <= 5 ? '#60a5fa' : '#2563eb';
-            return (
-              <div key={hr} className="p-3 text-center rounded" style={{ backgroundColor: intensity }}>
-                <div className="text-xs text-gray-700">{hr}:00</div>
-                {count > 0 && <div className="text-sm font-semibold">{count}</div>}
-              </div>
-            );
-          })}
-        </div>
+        <HourlyHeatmap events={events} />
       </div>
       <p className="text-sm text-gray-600 mb-3">Events listed below are for the selected date. Click an item to view its official source when available.</p>
       {events.length > 0 ? (

@@ -53,7 +53,7 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <MapPinIcon className="h-6 w-6 text-primary-600 mr-3" />
+                <MapPinIcon style={{ width: 12, height: 12 }} className="text-primary-600 mr-2" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
                     Events on {format(selectedDate, 'EEEE, MMMM d, yyyy')}
@@ -134,7 +134,7 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
                   {dayEvents.map((event) => (
                     <div key={event.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex-shrink-0">
-                        <ClockIcon className="h-5 w-5 text-gray-400" />
+                        <ClockIcon style={{ width: 12, height: 12 }} className="text-gray-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h5 className="text-sm font-medium text-gray-900 truncate">
@@ -159,7 +159,7 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
                       </div>
                       {event.latitude && event.longitude && (
                         <div className="flex-shrink-0">
-                          <MapPinIcon className="h-4 w-4 text-green-500" />
+                          <MapPinIcon style={{ width: 12, height: 12 }} className="text-green-500" />
                         </div>
                       )}
                     </div>
