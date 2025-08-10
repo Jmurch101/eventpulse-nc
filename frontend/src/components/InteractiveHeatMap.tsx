@@ -151,6 +151,7 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
           marginBottom: '2rem' 
         }}>
           <button
+            aria-label="Previous month"
             onClick={() => navigateMonth('prev')}
             style={{
               backgroundColor: 'transparent',
@@ -171,6 +172,7 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
           </h3>
           
           <button
+            aria-label="Next month"
             onClick={() => navigateMonth('next')}
             style={{
               backgroundColor: 'transparent',
@@ -227,6 +229,8 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
                     onDateSelect(day);
                   }
                 }}
+                role="button"
+                tabIndex={isCurrentMonth ? 0 : -1}
                 style={{
                   aspectRatio: '1',
                   backgroundColor: isSelected ? '#2563eb' : getHeatColor(eventCount),
@@ -247,6 +251,13 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
                   if (!isCurrentMonth) return;
                   e.preventDefault();
                   if (onOpenMapForDate) onOpenMapForDate(day);
+                }}
+                onKeyDown={(e) => {
+                  if (!isCurrentMonth) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onDateSelect(day);
+                  }
                 }}
                 onMouseEnter={(e) => {
                   if (isCurrentMonth && !isSelected) {
