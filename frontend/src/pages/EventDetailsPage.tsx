@@ -32,6 +32,11 @@ const EventDetailsPage: React.FC = () => {
   if (error || !event) return <div className="p-6 text-center text-red-600">{error || 'Event not found'}</div>;
 
   const eventsForMap: Event[] = [event];
+  const mapsUrl = event.latitude && event.longitude
+    ? `https://www.google.com/maps?q=${encodeURIComponent(event.latitude + ',' + event.longitude)}`
+    : event.location_name
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name)}`
+      : '';
 
   return (
     <div className="p-6 max-w-3xl mx-auto font-sans">
@@ -55,13 +60,18 @@ const EventDetailsPage: React.FC = () => {
         {event.description && (
           <p className="text-sm text-gray-800 mt-2 whitespace-pre-line">{event.description}</p>
         )}
-        {event.source_url && (
-          <div className="pt-2">
+        <div className="pt-2 flex items-center gap-3">
+          {event.source_url && (
             <a href={event.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-sm">
               Official source
             </a>
-          </div>
-        )}
+          )}
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-sm">
+              Directions
+            </a>
+          )}
+        </div>
         <div className="pt-2">
           <button onClick={() => downloadICS([event], `event_${event.id}.ics`, event.title)} className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 text-sm">Add to Calendar (ICS)</button>
         </div>
