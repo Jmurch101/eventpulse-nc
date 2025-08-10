@@ -422,6 +422,51 @@ app.post('/api/admin/cleanup-invalid', async (req, res) => {
   }
 });
 
+// Cleanup by keyword(s) in title/description
+app.post('/api/admin/cleanup-keyword', async (req, res) => {
+  try {
+    const { keywords = [], dryRun = false } = req.body || {};
+    const list = Array.isArray(keywords) ? keywords.filter(Boolean) : [];
+    if (list.length === 0) {
+      return res.status(400).json({ error: 'Provide keywords: array of strings', example: { keywords: ['test','sample'], dryRun: true } });
+    }
+
+    // Build dynamic WHERE (lower(title) LIKE ? OR lower(description) LIKE ?) for each keyword
+    const parts = [];
+    const params = [];
+    for (const k of list) {
+      parts.push('(lower(title) LIKE ? OR lower(description) LIKE ?)');
+      const pat = `%${String(k).toLowerCase()}%`;
+      params.push(pat, pat);
+    }
+    const where = parts.join(' OR ');
+
+    const selectSql = `SELECT id FROM events WHERE ${where}`;
+    db.all(selectSql, params, (err, rows) => {
+      if (err) {
+        console.error('Database error (select keyword):', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      const ids = rows.map(r => r.id);
+      if (ids.length === 0) return res.json({ matched: 0, deleted: 0, dryRun: Boolean(dryRun) });
+      if (dryRun) return res.json({ matched: ids.length, deleted: 0, dryRun: true });
+
+      const placeholders = ids.map(() => '?').join(',');
+      const delSql = `DELETE FROM events WHERE id IN (${placeholders})`;
+      db.run(delSql, ids, function(delErr) {
+        if (delErr) {
+          console.error('Database error (delete keyword):', delErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ matched: ids.length, deleted: this.changes, keywords: list });
+      });
+    });
+  } catch (error) {
+    console.error('Cleanup keyword API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Cleanup duplicates endpoint
 app.post('/api/events/cleanup-duplicates', async (req, res) => {
   try {
