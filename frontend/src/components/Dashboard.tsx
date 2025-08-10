@@ -186,17 +186,17 @@ const Dashboard: React.FC = () => {
           <Link to="/analytics" className="text-gray-600 hover:text-gray-800">
             Analytics
           </Link>
-          <button onClick={() => setView('events')} className={
+          <button aria-pressed={view==='events'} aria-label="Show events view" onClick={() => setView('events')} className={
             `px-3 py-1 rounded ${view === 'events' ? 'bg-blue-500 text-white font-semibold' : 'bg-gray-200 text-gray-700'}`
           }>
             Events
           </button>
-          <button onClick={() => setView('holidays')} className={
+          <button aria-pressed={view==='holidays'} aria-label="Show holidays view" onClick={() => setView('holidays')} className={
             `px-3 py-1 rounded ${view === 'holidays' ? 'bg-blue-500 text-white font-semibold' : 'bg-gray-200 text-gray-700'}`
           }>
             Holidays
           </button>
-          <button onClick={() => setView('map')} className={
+          <button aria-pressed={view==='map'} aria-label="Show map view" onClick={() => setView('map')} className={
             `px-3 py-1 rounded ${view === 'map' ? 'bg-blue-500 text-white font-semibold' : 'bg-gray-200 text-gray-700'}`
           }>
             Map

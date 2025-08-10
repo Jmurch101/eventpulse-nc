@@ -103,7 +103,7 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
 
   if (loading) {
     return (
-      <div style={{ padding: '1rem 0', textAlign: 'center' }}>
+      <div style={{ padding: '1rem 0', textAlign: 'center' }} aria-live="polite" aria-busy="true">
         <div style={{ fontSize: '1.125rem', color: '#6b7280' }}>
           Loading events for heatmap...
         </div>

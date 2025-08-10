@@ -22,9 +22,10 @@ function App() {
 
   return (
     <Router>
-      <div className="App">
+      <a href="#main" className="skip-link">Skip to content</a>
+      <div className="App" id="top">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<main id="main" role="main"><Dashboard /></main>} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/calendar" element={<InteractiveHeatMap onDateSelect={(date) => console.log('Selected date:', date)} />} />
           <Route path="/day/:date" element={<DayEventsPage />} />
