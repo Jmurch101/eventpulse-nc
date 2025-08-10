@@ -23,7 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run batch generator against production API
+      - name: Run real scrapers against production API
         env:
           API_URL: ${{ secrets.PRODUCTION_API_URL }}
         working-directory: scraper
@@ -32,4 +32,4 @@ jobs:
             echo "ERROR: PRODUCTION_API_URL secret not set" >&2
             exit 1
           fi
-          python enhanced_data_collection.py
+          python run_all_scrapers.py
