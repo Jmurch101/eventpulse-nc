@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import AdvancedSearch, { SearchFilters } from './AdvancedSearch';
 import CategoryBubbles from './CategoryBubbles';
 import InteractiveHeatMap from './InteractiveHeatMap';
@@ -21,6 +21,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<'live' | 'all'>('live');
   const [activeFilters, setActiveFilters] = useState<SearchFilters | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // categories drive selectedEventTypes; no modal needed
@@ -68,6 +69,51 @@ const Dashboard: React.FC = () => {
     setActiveFilters(filters);
     setSelectedEventTypes(filters.eventTypes);
   };
+
+  // Initialize state from URL search params
+  useEffect(() => {
+    const viewParam = searchParams.get('view') as 'events' | 'holidays' | 'map' | null;
+    const typesParam = searchParams.get('types');
+    const cityParam = searchParams.get('city');
+    const radiusParam = searchParams.get('radius');
+    const startParam = searchParams.get('start');
+    const endParam = searchParams.get('end');
+
+    if (viewParam && ['events', 'holidays', 'map'].includes(viewParam)) {
+      setView(viewParam);
+    }
+
+    if (typesParam) {
+      const t = typesParam.split(',').filter(Boolean);
+      setSelectedEventTypes(t);
+    }
+
+    if (cityParam || startParam || endParam || radiusParam) {
+      setActiveFilters({
+        query: '',
+        eventTypes: typesParam ? typesParam.split(',').filter(Boolean) : [],
+        dateRange: { start: startParam || '', end: endParam || '' },
+        location: { city: cityParam || '', radius: radiusParam ? Number(radiusParam) : 25 },
+        price: { min: 0, max: 1000 },
+        tags: []
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync state to URL search params
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    params.view = view;
+    if (selectedEventTypes.length > 0) params.types = selectedEventTypes.join(',');
+    if (activeFilters) {
+      if (activeFilters.location.city) params.city = activeFilters.location.city;
+      if (activeFilters.location.radius) params.radius = String(activeFilters.location.radius);
+      if (activeFilters.dateRange.start) params.start = activeFilters.dateRange.start;
+      if (activeFilters.dateRange.end) params.end = activeFilters.dateRange.end;
+    }
+    setSearchParams(params);
+  }, [view, selectedEventTypes, activeFilters, setSearchParams]);
 
   // Simple frontend validation to hide obviously bad events
   const isValidEvent = (ev: Event): boolean => {
@@ -208,6 +254,11 @@ const Dashboard: React.FC = () => {
              className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600">
              Export ICS
            </button>
+           <button
+             onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
+             className="px-3 py-1 rounded bg-gray-800 text-white hover:bg-black"
+             aria-label="Copy shareable link"
+           >Share</button>
         </div>
       </nav>
       {/* Tagline */}
