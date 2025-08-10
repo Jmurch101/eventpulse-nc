@@ -178,16 +178,42 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       ) : view === 'holidays' ? (
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:flex-1">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="lg:flex-1">
             <div className="mb-4 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-              Holidays view shows official and academic breaks across NC. Click a date to see all holiday events; right‑click to open the holiday map.
+              Holidays view shows official and academic breaks across NC. Click a date to see all holiday events; right‑click to open the map.
             </div>
             <InteractiveHeatMap
               onDateSelect={handleDateSelect}
               onOpenMapForDate={(d) => setMapOverlayDate(d)}
               selectedEventTypes={['holiday']}
             />
+          </div>
+          <div className="lg:w-1/3 bg-white rounded-lg shadow p-4 h-fit">
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">Upcoming Holidays</h3>
+            <ul className="space-y-2">
+              {allEvents
+                .filter(ev => ev.event_type === 'holiday')
+                .filter(ev => new Date(ev.start_date).getTime() >= Date.now())
+                .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                .slice(0, 10)
+                .map(ev => (
+                  <li key={ev.id} className="flex items-start gap-2 border border-gray-100 rounded p-2">
+                    <div className="text-xs text-gray-500 w-20 shrink-0">
+                      {format(new Date(ev.start_date), 'MMM d')}
+                    </div>
+                    <div className="text-sm text-gray-800 leading-snug">
+                      <div className="font-medium">{ev.title}</div>
+                      {ev.location_name && (
+                        <div className="text-xs text-gray-500">{ev.location_name}</div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              {allEvents.filter(ev => ev.event_type === 'holiday' && new Date(ev.start_date).getTime() >= Date.now()).length === 0 && (
+                <li className="text-xs text-gray-500">No upcoming holidays found.</li>
+              )}
+            </ul>
           </div>
         </div>
       ) : (
