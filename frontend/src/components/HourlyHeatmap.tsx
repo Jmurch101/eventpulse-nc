@@ -57,36 +57,39 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
         <div className="mb-2 text-[10px] text-gray-500">Tip: Left‑click a calendar day to see its events listed below.</div>
       )}
       {!collapsed && (
-        <div className="grid border border-gray-300 rounded" style={{ gridTemplateColumns: `${compact ? '64px repeat(24, minmax(12px, 1fr))' : '72px repeat(24, minmax(14px, 1fr))'}`, gap: 0 }}>
-          <div className="text-[10px] text-gray-700 font-medium flex items-center justify-end pr-1 bg-gray-50 border-b border-gray-300">Day</div>
-          {Array.from({ length: 24 }).map((_, hr) => (
-            <div key={hr} className="text-[9px] text-center text-gray-800 bg-gray-50 border-b border-l border-gray-300" style={{ lineHeight: `${cellSize}px`, height: cellSize }}>{hourHeader(hr)}</div>
-          ))}
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
-            <React.Fragment key={label}>
-              <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end border-t bg-white" style={{ borderTop: '2px solid #cbd5e1' }}>{label}</div>
-              {Array.from({ length: 24 }).map((_, hr) => (
-                <div
-                  key={hr}
-                  className="relative"
-                  title={`${label} ${hr}:00 — ${grid[day][hr]} event${grid[day][hr] === 1 ? '' : 's'}`}
-                  style={{
-                    backgroundColor: colorFor(grid[day][hr]),
-                    height: cellSize,
-                    borderTop: '1px solid #cbd5e1',
-                    borderLeft: '1px solid #d1d5e1',
-                    borderRight: '1px solid #e5e7eb'
-                  }}
-                >
-                  {showHourLabels && (
-                    <span className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-700" style={{ lineHeight: 1 }}>
-                      {hr}
+        <div style={{ overflowX: 'auto' }}>
+          <div
+            className="grid border border-gray-300 rounded"
+            style={{
+              gridTemplateColumns: `${compact ? '64px repeat(24, 48px)' : '72px repeat(24, 56px)'}`,
+              gap: 0,
+              rowGap: 6,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
+              <React.Fragment key={label}>
+                <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end bg-white" style={{ borderTop: '2px solid #cbd5e1' }}>{label}</div>
+                {Array.from({ length: 24 }).map((_, hr) => (
+                  <div
+                    key={hr}
+                    className="relative"
+                    title={`${label} ${hourHeader(hr)} — ${grid[day][hr]} event${grid[day][hr] === 1 ? '' : 's'}`}
+                    style={{
+                      backgroundColor: colorFor(grid[day][hr]),
+                      height: cellSize,
+                      borderTop: '1px solid #cbd5e1',
+                      borderLeft: '1px solid #d1d5e1'
+                    }}
+                  >
+                    <span className="absolute left-0.5 top-0.5 text-[9px] text-gray-700" style={{ pointerEvents: 'none' }}>
+                      {hourHeader(hr)}
                     </span>
-                  )}
-                </div>
-              ))}
-            </React.Fragment>
-          ))}
+                  </div>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       )}
       {!compact && !collapsed && (
