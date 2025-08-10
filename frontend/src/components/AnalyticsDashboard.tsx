@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  UsersIcon, 
-  CalendarIcon, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  CalendarIcon,
   MapPinIcon,
   ArrowTrendingUpIcon,
-  EyeIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import { eventService } from '../services/api';
+import { Event } from '../types/Event';
 
 interface AnalyticsData {
   totalEvents: number;
-  totalUsers: number;
-  activeUsers: number;
+  eventsInRange: number;
+  growthRatePercent: number;
+  citiesCovered: number;
   eventsByType: { [key: string]: number };
   eventsByLocation: { [key: string]: number };
-  popularEvents: Array<{
+  upcomingEvents: Array<{
     id: number;
     title: string;
-    views: number;
+    start_date: string;
     event_type: string;
   }>;
   recentActivity: Array<{
@@ -26,12 +27,6 @@ interface AnalyticsData {
     timestamp: string;
     details: string;
   }>;
-  performanceMetrics: {
-    avgLoadTime: number;
-    apiResponseTime: number;
-    cacheHitRate: number;
-    errorRate: number;
-  };
 }
 
 const AnalyticsDashboard: React.FC = () => {
@@ -39,64 +34,98 @@ const AnalyticsDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d'); // 7d, 30d, 90d
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeRange]);
-
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
-      // Simulate API call - replace with actual analytics endpoint
-      const mockData: AnalyticsData = {
-        totalEvents: 1091,
-        totalUsers: 2456,
-        activeUsers: 892,
-        eventsByType: {
-          academic: 458,
-          government: 234,
-          community: 189,
-          tech: 156,
-          holiday: 54
-        },
-        eventsByLocation: {
-          'Raleigh': 345,
-          'Durham': 234,
-          'Chapel Hill': 189,
-          'Cary': 156,
-          'Other': 167
-        },
-        popularEvents: [
-          { id: 1, title: 'NC State Engineering Career Fair', views: 1245, event_type: 'academic' },
-          { id: 2, title: 'Raleigh City Council Meeting', views: 892, event_type: 'government' },
-          { id: 3, title: 'Triangle Tech Meetup', views: 756, event_type: 'tech' },
-          { id: 4, title: 'Durham Farmers Market', views: 634, event_type: 'community' },
-          { id: 5, title: 'UNC Research Symposium', views: 523, event_type: 'academic' }
-        ],
-        recentActivity: [
-          { id: 1, action: 'Event Created', timestamp: '2024-01-15T10:30:00Z', details: 'New academic event added' },
-          { id: 2, action: 'User Registration', timestamp: '2024-01-15T09:15:00Z', details: 'New user joined platform' },
-          { id: 3, action: 'Event Updated', timestamp: '2024-01-15T08:45:00Z', details: 'Government meeting details updated' },
-          { id: 4, action: 'Search Query', timestamp: '2024-01-15T08:20:00Z', details: 'Popular search: "tech events"' },
-          { id: 5, action: 'Map Interaction', timestamp: '2024-01-15T07:55:00Z', details: 'User explored Raleigh area' }
-        ],
-        performanceMetrics: {
-          avgLoadTime: 1.2,
-          apiResponseTime: 0.8,
-          cacheHitRate: 85.5,
-          errorRate: 0.3
-        }
+      const events: Event[] = await eventService.getEvents();
+
+      const now = new Date();
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const rangeStart = new Date(now);
+      rangeStart.setDate(now.getDate() - days);
+      const prevRangeStart = new Date(rangeStart);
+      prevRangeStart.setDate(rangeStart.getDate() - days);
+
+      const toDate = (s: string) => new Date(s);
+      const inRange = (e: Event, start: Date, end: Date) => {
+        const d = toDate(e.start_date);
+        return d >= start && d <= end;
       };
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setAnalyticsData(mockData);
+      const eventsInRange = events.filter(e => inRange(e, rangeStart, now));
+      const prevEventsInRange = events.filter(e => inRange(e, prevRangeStart, rangeStart));
+
+      // By type (within selected range)
+      const eventsByType = eventsInRange.reduce<Record<string, number>>((acc, e) => {
+        acc[e.event_type] = (acc[e.event_type] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Location extraction (very simple heuristic)
+      const KNOWN_CITIES = [
+        'Raleigh','Durham','Chapel Hill','Cary','Charlotte','Greensboro','Winston-Salem','Asheville','Fayetteville'
+      ];
+      const extractCity = (location: string): string => {
+        if (!location) return 'Other';
+        const match = KNOWN_CITIES.find(city => location.toLowerCase().includes(city.toLowerCase()));
+        return match || 'Other';
+      };
+      const eventsByLocation = eventsInRange.reduce<Record<string, number>>((acc, e) => {
+        const city = extractCity(e.location_name || '');
+        acc[city] = (acc[city] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Upcoming events (next events after now)
+      const upcomingEvents = [...events]
+        .filter(e => toDate(e.start_date) >= now)
+        .sort((a, b) => toDate(a.start_date).getTime() - toDate(b.start_date).getTime())
+        .slice(0, 5)
+        .map(e => ({ id: e.id, title: e.title, start_date: e.start_date, event_type: e.event_type }));
+
+      // Recent activity from ingest timestamps
+      const recentActivity = [...events]
+        .filter(e => !!e.created_at)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5)
+        .map((e, idx) => ({
+          id: idx,
+          action: 'Event Ingested',
+          timestamp: e.created_at,
+          details: e.title
+        }));
+
+      const growthRatePercent = prevEventsInRange.length === 0
+        ? 100
+        : ((eventsInRange.length - prevEventsInRange.length) / prevEventsInRange.length) * 100;
+
+      const citiesCovered = Object.keys(
+        events.reduce<Record<string, true>>((acc, e) => {
+          acc[extractCity(e.location_name || '')] = true;
+          return acc;
+        }, {})
+      ).length;
+
+      setAnalyticsData({
+        totalEvents: events.length,
+        eventsInRange: eventsInRange.length,
+        growthRatePercent,
+        citiesCovered,
+        eventsByType,
+        eventsByLocation,
+        upcomingEvents,
+        recentActivity,
+      });
     } catch (error) {
       console.error('Error fetching analytics data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
 
   const getEventTypeColor = (eventType: string) => {
     const colors = {
@@ -112,16 +141,8 @@ const AnalyticsDashboard: React.FC = () => {
   if (loading || !analyticsData) {
     return (
       <div className="space-y-6">
-        {/* Status + Presented By (always visible) */}
+        {/* Presented By (always visible) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm text-blue-800">
-                Analytics collection is currently limited on the public demo. Production metrics will populate
-                after launch with privacy-friendly, aggregated tracking. In the meantime, charts will appear here.
-              </p>
-            </div>
-          </div>
           <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center gap-3">
             <div className="text-right">
               <div className="text-xs uppercase tracking-wide text-gray-500">Presented by</div>
@@ -166,7 +187,7 @@ const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Status + Presented By */}
+      {/* Overview + Presented By */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
           <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
@@ -209,10 +230,10 @@ const AnalyticsDashboard: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <UsersIcon style={{ width: 12, height: 12 }} className="text-green-600" />
+            <CalendarIcon style={{ width: 12, height: 12 }} className="text-green-600" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900">{analyticsData.activeUsers.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-600">Events in Range</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.eventsInRange.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -222,17 +243,17 @@ const AnalyticsDashboard: React.FC = () => {
             <ArrowTrendingUpIcon style={{ width: 12, height: 12 }} className="text-purple-600" />
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Growth Rate</p>
-              <p className="text-2xl font-bold text-gray-900">+12.5%</p>
+              <p className="text-2xl font-bold text-gray-900">{`${analyticsData.growthRatePercent >= 0 ? '+' : ''}${analyticsData.growthRatePercent.toFixed(1)}%`}</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <EyeIcon style={{ width: 12, height: 12 }} className="text-orange-600" />
+            <MapPinIcon style={{ width: 12, height: 12 }} className="text-orange-600" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Page Views</p>
-              <p className="text-2xl font-bold text-gray-900">45.2K</p>
+              <p className="text-sm font-medium text-gray-600">Cities Covered</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData.citiesCovered.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -273,11 +294,11 @@ const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Popular Events */}
+      {/* Upcoming Events */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Most Popular Events</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
         <div className="space-y-3">
-          {analyticsData.popularEvents.map((event) => (
+          {analyticsData.upcomingEvents.map((event) => (
             <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className={`w-3 h-3 rounded-full ${getEventTypeColor(event.event_type)}`}></div>
@@ -287,36 +308,15 @@ const AnalyticsDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <EyeIcon style={{ width: 12, height: 12 }} className="text-gray-400" />
-                <span className="text-sm text-gray-600">{event.views.toLocaleString()}</span>
+                <ClockIcon style={{ width: 12, height: 12 }} className="text-gray-400" />
+                <span className="text-sm text-gray-600">{new Date(event.start_date).toLocaleString()}</span>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Performance Metrics */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{analyticsData.performanceMetrics.avgLoadTime}s</p>
-            <p className="text-sm text-gray-600">Avg Load Time</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">{analyticsData.performanceMetrics.apiResponseTime}ms</p>
-            <p className="text-sm text-gray-600">API Response</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-purple-600">{analyticsData.performanceMetrics.cacheHitRate}%</p>
-            <p className="text-sm text-gray-600">Cache Hit Rate</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-red-600">{analyticsData.performanceMetrics.errorRate}%</p>
-            <p className="text-sm text-gray-600">Error Rate</p>
-          </div>
-        </div>
-      </div>
+      {/* Performance Metrics panel removed until runtime metrics are enabled */}
 
       {/* Recent Activity */}
       <div className="bg-white rounded-lg shadow p-6">
