@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { XMarkIcon, MapPinIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import { Event } from '../types/Event';
@@ -12,17 +12,36 @@ interface DayMapModalProps {
 }
 
 const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate, events }) => {
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['academic','government','city','holiday']);
+  const [mode, setMode] = useState<'all' | 'live'>('all');
+
+  const dayEvents = useMemo(() => {
+    if (!selectedDate) return [] as Event[];
+    return events.filter(event => {
+      const eventDate = new Date(event.start_date);
+      return format(eventDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+    });
+  }, [events, selectedDate]);
+
+  const eventsWithLocation = useMemo(() => {
+    const now = Date.now();
+    const ONE_HOUR = 60 * 60 * 1000;
+    return dayEvents.filter(event => {
+      if (!event.latitude || !event.longitude) return false;
+      if (event.latitude === 0 && event.longitude === 0) return false;
+      if (!selectedTypes.includes(event.event_type)) return false;
+      if (mode === 'live') {
+        const start = new Date(event.start_date).getTime();
+        const end = new Date(event.end_date).getTime();
+        const isLive = start <= now && now < end;
+        const isSoon = start > now && start - now <= ONE_HOUR;
+        return isLive || isSoon;
+      }
+      return true;
+    });
+  }, [dayEvents, selectedTypes, mode]);
+
   if (!isOpen || !selectedDate) return null;
-
-  const dayEvents = events.filter(event => {
-    const eventDate = new Date(event.start_date);
-    return format(eventDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
-  });
-
-  const eventsWithLocation = dayEvents.filter(event => 
-    event.latitude && event.longitude && 
-    event.latitude !== 0 && event.longitude !== 0
-  );
 
   const getEventTypeColor = (eventType: string) => {
     switch (eventType) {
@@ -74,11 +93,37 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
 
           {/* Content */}
           <div className="bg-white">
+            {/* Filters */}
+            <div className="px-6 pt-4 pb-2 flex flex-wrap items-center gap-3 text-xs text-gray-700">
+              <div className="flex items-center gap-2">
+                {['academic','government','city','holiday'].map(t => (
+                  <label key={t} className="inline-flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes(t)}
+                      onChange={() => setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
+                    />
+                    <span className="capitalize">{t}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <span>Show:</span>
+                <button
+                  className={`px-2 py-1 rounded ${mode === 'live' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  onClick={() => setMode('live')}
+                >Live / Next Hour</button>
+                <button
+                  className={`px-2 py-1 rounded ${mode === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  onClick={() => setMode('all')}
+                >All</button>
+              </div>
+            </div>
             {/* Map */}
-            <div className="h-96 w-full">
+            <div className="h-80 w-full">
               <MapContainer
                 center={[35.7796, -78.6382]}
-                zoom={10}
+                zoom={11}
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer
@@ -90,12 +135,12 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
                   <CircleMarker
                     key={event.id}
                     center={[event.latitude, event.longitude]}
-                    radius={10}
+                    radius={6}
                     fillColor={getEventTypeColor(event.event_type)}
                     color={getEventTypeColor(event.event_type)}
-                    weight={2}
-                    opacity={0.8}
-                    fillOpacity={0.6}
+                    weight={1.5}
+                    opacity={0.9}
+                    fillOpacity={0.7}
                   >
                     <Popup>
                       <div className="p-2">
