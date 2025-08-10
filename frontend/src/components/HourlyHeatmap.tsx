@@ -37,14 +37,14 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
   return (
     <div className="text-xs">
       <div className="flex items-center justify-between mb-1">
-        <div className="text-gray-700">Weekly Hourly Heatmap</div>
+        <div className="text-gray-700">Weekly Time Heatmap</div>
         <button onClick={() => setCollapsed(c => !c)} className="text-[10px] text-blue-600 hover:underline">
           {collapsed ? 'Expand' : 'Collapse'}
         </button>
       </div>
       {!compact && (
         <div className="mb-1 text-[11px] text-gray-600">
-          Hours run left to right (0–23). Days run top to bottom (Sun–Sat). Darker cells mean more events.
+          Time runs left to right (0–23). Days run top to bottom (Sun–Sat). Darker cells mean more events.
         </div>
       )}
       {!compact && (
