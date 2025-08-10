@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import NCMap from '../components/NCMap';
+import { downloadICS } from '../utils/exporters';
 
 const EventDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +62,9 @@ const EventDetailsPage: React.FC = () => {
             </a>
           </div>
         )}
+        <div className="pt-2">
+          <button onClick={() => downloadICS([event], `event_${event.id}.ics`, event.title)} className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 text-sm">Add to Calendar (ICS)</button>
+        </div>
       </div>
 
       <div className="mt-6">

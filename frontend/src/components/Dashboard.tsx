@@ -350,20 +350,37 @@ const Dashboard: React.FC = () => {
             }}
           />
           {/* Map view controls */}
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-sm text-gray-600">Map filter:</span>
-            <button
-              onClick={() => setMapMode('live')}
-              className={`px-3 py-1 rounded text-sm ${mapMode === 'live' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
-            >
-              Live / Next Hour
-            </button>
-            <button
-              onClick={() => setMapMode('all')}
-              className={`px-3 py-1 rounded text-sm ${mapMode === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
-            >
-              All Events
-            </button>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">Event types:</span>
+              {['academic','government','city','holiday'].map(t => (
+                <label key={t} className="text-sm text-gray-700 inline-flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedEventTypes.includes(t)}
+                    onChange={() => {
+                      setSelectedEventTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+                    }}
+                  />
+                  <span className="capitalize">{t}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">Map filter:</span>
+              <button
+                onClick={() => setMapMode('live')}
+                className={`px-3 py-1 rounded text-sm ${mapMode === 'live' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
+              >
+                Live / Next Hour
+              </button>
+              <button
+                onClick={() => setMapMode('all')}
+                className={`px-3 py-1 rounded text-sm ${mapMode === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}
+              >
+                All Events
+              </button>
+            </div>
           </div>
           {error ? (
             <div className="text-center text-red-600">{error}</div>
