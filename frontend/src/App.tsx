@@ -4,6 +4,7 @@ import './App.css';
 import Dashboard from './components/Dashboard';
 import Analytics from './pages/Analytics';
 import DayEventsPage from './pages/DayEventsPage';
+import EventDetailsPage from './pages/EventDetailsPage';
 import InteractiveHeatMap from './components/InteractiveHeatMap';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/calendar" element={<InteractiveHeatMap onDateSelect={(date) => console.log('Selected date:', date)} />} />
           <Route path="/day/:date" element={<DayEventsPage />} />
+          <Route path="/event/:id" element={<EventDetailsPage />} />
         </Routes>
       </div>
     </Router>

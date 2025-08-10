@@ -110,6 +110,11 @@ export const NCMap: React.FC<NCMapProps> = ({ events, mode = 'live' }) => {
                     </a>
                   </div>
                 )}
+                <div style={{ marginTop: 8 }}>
+                  <a href={`#/event/${ev.id}`} style={{ color: '#1d4ed8', fontWeight: 600, fontSize: 12 }}>
+                    View details →
+                  </a>
+                </div>
               </div>
             </Popup>
           </Marker>

@@ -68,7 +68,7 @@ const DayEventsPage: React.FC = () => {
         <ul className="space-y-4">
           {events.map(ev => (
             <li key={ev.id} className="bg-white p-4 rounded shadow hover:shadow-md transition">
-              <h2 className="text-lg font-semibold">{ev.title}</h2>
+              <Link to={`/event/${ev.id}`} className="text-lg font-semibold text-blue-600 hover:underline">{ev.title}</Link>
               <p className="text-gray-600">{ev.location_name}</p>
               <p className="text-gray-500">
                 {format(new Date(ev.start_date), 'h:mm a')} - {format(new Date(ev.end_date), 'h:mm a')}
