@@ -63,10 +63,19 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
             style={{
               gridTemplateColumns: `${compact ? '64px repeat(24, 48px)' : '72px repeat(24, 56px)'}`,
               gap: 0,
-              rowGap: 6,
+              rowGap: 10,
               whiteSpace: 'nowrap'
             }}
           >
+            {/* Header row */}
+            <div className="bg-gray-50 border-b border-gray-300" />
+            {Array.from({ length: 24 }).map((_, hr) => (
+              <div key={`h-${hr}`} className="text-[10px] text-gray-700 bg-gray-50 border-b border-l border-gray-300 flex items-center justify-center" style={{ height: cellSize + 6 }}>
+                {hourHeader(hr)}
+              </div>
+            ))}
+
+            {/* Day rows */}
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
               <React.Fragment key={label}>
                 <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end bg-white" style={{ borderTop: '2px solid #cbd5e1' }}>{label}</div>
@@ -78,14 +87,10 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
                     style={{
                       backgroundColor: colorFor(grid[day][hr]),
                       height: cellSize,
-                      borderTop: '1px solid #cbd5e1',
-                      borderLeft: '1px solid #d1d5e1'
+                      borderTop: '1px solid #e5e7eb',
+                      borderLeft: '1px solid #e5e7eb'
                     }}
-                  >
-                    <span className="absolute left-0.5 top-0.5 text-[9px] text-gray-700" style={{ pointerEvents: 'none' }}>
-                      {hourHeader(hr)}
-                    </span>
-                  </div>
+                  />
                 ))}
               </React.Fragment>
             ))}
