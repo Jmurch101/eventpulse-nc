@@ -30,9 +30,10 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events }) => {
   return (
     <div className="text-xs">
       <div className="mb-1 text-gray-700">Weekly Hourly Heatmap</div>
-      <div className="mb-2 text-[11px] text-gray-600">
+      <div className="mb-1 text-[11px] text-gray-600">
         Hours run left to right (0–23). Days run top to bottom (Sun–Sat). Darker cells mean more events.
       </div>
+      <div className="mb-2 text-[10px] text-gray-500">Tip: Left‑click a calendar day to see its events listed below.</div>
       <div className="grid" style={{ gridTemplateColumns: '56px repeat(24, minmax(14px, 1fr))', gap: 1 }}>
         <div className="text-[10px] text-gray-500 flex items-center justify-end pr-1">Day</div>
         {Array.from({ length: 24 }).map((_, hr) => (
@@ -44,14 +45,17 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events }) => {
             {Array.from({ length: 24 }).map((_, hr) => (
               <div
                 key={hr}
-                className="rounded"
+                className="rounded relative"
                 title={`${label} ${hr}:00 — ${grid[day][hr]} event${grid[day][hr] === 1 ? '' : 's'}`}
                 style={{
                   backgroundColor: colorFor(grid[day][hr]),
-                  height: 10,
+                  aspectRatio: '1',
+                  minHeight: 12,
                   border: '1px solid #e5e7eb'
                 }}
-              />
+              >
+                <span className="absolute left-0.5 top-0.5 text-[8px] text-gray-500">{hr}</span>
+              </div>
             ))}
           </React.Fragment>
         ))}

@@ -321,6 +321,7 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
             </div>
           ))}
         </div>
+        <div className="text-center mt-2 text-sm text-gray-600">Tip: Left‑click a date to show events below. Right‑click to open the map.</div>
       </div>
     </div>
   );
