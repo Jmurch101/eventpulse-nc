@@ -1,0 +1,35 @@
+name: Nightly Scrape and Ingest
+
+on:
+  schedule:
+    - cron: '15 3 * * *' # 03:15 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install scraper deps
+        working-directory: scraper
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run batch generator against production API
+        env:
+          API_URL: ${{ secrets.PRODUCTION_API_URL }}
+        working-directory: scraper
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "ERROR: PRODUCTION_API_URL secret not set" >&2
+            exit 1
+          fi
+          python enhanced_data_collection.py
