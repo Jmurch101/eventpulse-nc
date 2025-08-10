@@ -46,6 +46,12 @@ export const eventService = {
     const response = await api.get(`/api/events/${id}`);
     return response.data;
   },
+
+  // Ingest stats
+  getIngestStats: async (): Promise<any> => {
+    const response = await api.get('/api/ingest/stats');
+    return response.data;
+  },
 };
 
 export default api; 

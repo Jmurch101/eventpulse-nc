@@ -25,6 +25,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 app.use(limiter);
 
+// In-memory ingest stats (resets on restart; OK for demo)
+const ingestStats = {
+  totals: { received: 0, inserted: 0, duplicates: 0, failed: 0 },
+  lastBatch: { received: 0, inserted: 0, duplicates: 0, failed: 0 },
+  reasons: { invalid_date: 0, invalid_order: 0, too_long: 0, invalid_coords: 0, missing_fields: 0 }
+};
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
@@ -167,6 +174,7 @@ app.post('/api/events', async (req, res) => {
     
     // Validation
     if (!title || !start_date || !end_date) {
+      ingestStats.reasons.missing_fields++;
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -174,13 +182,16 @@ app.post('/api/events', async (req, res) => {
     const startMs = Date.parse(start_date);
     const endMs = Date.parse(end_date);
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      ingestStats.reasons.invalid_date++;
       return res.status(400).json({ error: 'Invalid date format' });
     }
     if (endMs <= startMs) {
+      ingestStats.reasons.invalid_order++;
       return res.status(400).json({ error: 'End time must be after start time' });
     }
     const FOURTEEN_HOURS = 14 * 60 * 60 * 1000;
     if (endMs - startMs > FOURTEEN_HOURS) {
+      ingestStats.reasons.too_long++;
       return res.status(400).json({ error: 'Event duration exceeds 14 hours' });
     }
 
@@ -188,6 +199,7 @@ app.post('/api/events', async (req, res) => {
     const latOk = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
     const lonOk = longitude === undefined || (Number.isFinite(Number(longitude)) && Math.abs(Number(longitude)) <= 180);
     if (!latOk || !lonOk) {
+      ingestStats.reasons.invalid_coords++;
       return res.status(400).json({ error: 'Invalid latitude/longitude' });
     }
     
@@ -205,6 +217,7 @@ app.post('/api/events', async (req, res) => {
       
       if (existingEvent) {
         // Event already exists, return success but indicate it's a duplicate
+        ingestStats.totals.duplicates++;
         return res.status(200).json({
           id: existingEvent.id,
           message: 'Event already exists (duplicate prevented)',
@@ -231,6 +244,7 @@ app.post('/api/events', async (req, res) => {
           return res.status(500).json({ error: 'Database error' });
         }
         
+        ingestStats.totals.inserted++;
         res.status(201).json({
           id: this.lastID,
           message: 'Event created successfully',
@@ -263,24 +277,26 @@ app.post('/api/events/batch', async (req, res) => {
       } = e;
 
       if (!title || !start_date || !end_date) {
-        failed++; return resolve();
+        failed++; ingestStats.reasons.missing_fields++; return resolve();
       }
 
       // Validate times
       const sMs = Date.parse(start_date);
       const eMs = Date.parse(end_date);
-      if (!Number.isFinite(sMs) || !Number.isFinite(eMs) || eMs <= sMs || (eMs - sMs) > (14*60*60*1000)) {
-        failed++; return resolve();
+      if (!Number.isFinite(sMs)) { failed++; ingestStats.reasons.invalid_date++; return resolve(); }
+      if (!Number.isFinite(eMs)) { failed++; ingestStats.reasons.invalid_date++; return resolve(); }
+      if (eMs <= sMs) { failed++; ingestStats.reasons.invalid_order++; return resolve(); }
+      if ((eMs - sMs) > (14*60*60*1000)) { failed++; ingestStats.reasons.too_long++; return resolve(); }
       }
 
       // Validate coordinates if present
       const latOkB = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
       const lonOkB = longitude === undefined || (Number.isFinite(Number(longitude)) && Math.abs(Number(longitude)) <= 180);
-      if (!latOkB || !lonOkB) { failed++; return resolve(); }
+      if (!latOkB || !lonOkB) { failed++; ingestStats.reasons.invalid_coords++; return resolve(); }
 
       db.get('SELECT id FROM events WHERE title = ? AND start_date = ?', [title, start_date], (err, existing) => {
         if (err) { failed++; return resolve(); }
-        if (existing) { duplicates++; return resolve(); }
+        if (existing) { duplicates++; ingestStats.totals.duplicates++; return resolve(); }
 
         const insertQuery = `
           INSERT INTO events (
@@ -293,7 +309,7 @@ app.post('/api/events/batch', async (req, res) => {
           Number(latitude) || 0, Number(longitude) || 0, organization_id || 1, event_type || 'other', source_url || ''
         ];
         db.run(insertQuery, params, function(err2) {
-          if (err2) { failed++; } else { inserted++; }
+          if (err2) { failed++; } else { inserted++; ingestStats.totals.inserted++; }
           resolve();
         });
       });
@@ -304,7 +320,9 @@ app.post('/api/events/batch', async (req, res) => {
       await insertOne(e);
     }
 
-    res.json({ received: events.length, inserted, duplicates, failed });
+    ingestStats.totals.received += events.length;
+    ingestStats.lastBatch = { received: events.length, inserted, duplicates, failed };
+    res.json(ingestStats.lastBatch);
   } catch (error) {
     console.error('Batch ingest error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -572,6 +590,11 @@ app.get('/api/analytics', async (req, res) => {
     console.error('Analytics API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Ingest stats endpoint
+app.get('/api/ingest/stats', (req, res) => {
+  res.json(ingestStats);
 });
 
 // Performance Monitoring Endpoint

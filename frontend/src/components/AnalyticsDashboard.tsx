@@ -33,6 +33,7 @@ const AnalyticsDashboard: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d'); // 7d, 30d, 90d
+  const [ingestStats, setIngestStats] = useState<any | null>(null);
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
@@ -126,6 +127,16 @@ const AnalyticsDashboard: React.FC = () => {
   useEffect(() => {
     fetchAnalyticsData();
   }, [fetchAnalyticsData]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { eventService } = await import('../services/api');
+        const data = await (eventService as any).getIngestStats?.();
+        if (data) setIngestStats(data);
+      } catch {}
+    })();
+  }, []);
 
   const getEventTypeColor = (eventType: string) => {
     const colors = {
@@ -257,6 +268,40 @@ const AnalyticsDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Data Quality / Ingest Stats */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Quality</h3>
+        {ingestStats ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <div className="text-gray-600">Last Batch</div>
+              <div className="font-semibold">{ingestStats.lastBatch.received} received</div>
+              <div className="text-gray-600">{ingestStats.lastBatch.inserted} inserted</div>
+              <div className="text-gray-600">{ingestStats.lastBatch.duplicates} duplicates</div>
+              <div className="text-gray-600">{ingestStats.lastBatch.failed} failed</div>
+            </div>
+            <div>
+              <div className="text-gray-600">Totals</div>
+              <div className="font-semibold">{ingestStats.totals.received} received</div>
+              <div className="text-gray-600">{ingestStats.totals.inserted} inserted</div>
+              <div className="text-gray-600">{ingestStats.totals.duplicates} duplicates</div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-gray-600 mb-1">Rejected reasons</div>
+              <ul className="text-gray-700 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <li>Invalid date: {ingestStats.reasons.invalid_date}</li>
+                <li>Invalid order: {ingestStats.reasons.invalid_order}</li>
+                <li>Too long: {ingestStats.reasons.too_long}</li>
+                <li>Invalid coords: {ingestStats.reasons.invalid_coords}</li>
+                <li>Missing fields: {ingestStats.reasons.missing_fields}</li>
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-600 text-sm">No ingest stats yet.</div>
+        )}
       </div>
 
       {/* Charts and Data */}
