@@ -280,6 +280,18 @@ const Dashboard: React.FC = () => {
               setSelectedCategory('all');
             }}
           />
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => {
+                // show only favorites
+                const favIds = (JSON.parse(localStorage.getItem('eventpulse_favorites_v1') || '[]') as number[]);
+                if (favIds.length === 0) return;
+                const favTypes = Array.from(new Set(allEvents.filter(e => favIds.includes(e.id)).map(e => e.event_type)));
+                setSelectedEventTypes(favTypes);
+              }}
+              className="px-3 py-1 rounded bg-yellow-100 text-yellow-800 text-sm"
+            >Show Favorites</button>
+          </div>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="md:w-1/3 space-y-3">
               <CategoryBubbles

@@ -5,6 +5,7 @@ import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import NCMap from '../components/NCMap';
 import HourlyHeatmap from '../components/HourlyHeatmap';
+import { toggleFavorite, isFavorite } from '../utils/favorites';
 import { downloadICS } from '../utils/exporters';
 
 const DayEventsPage: React.FC = () => {
@@ -68,7 +69,15 @@ const DayEventsPage: React.FC = () => {
         <ul className="space-y-4">
           {events.map(ev => (
             <li key={ev.id} className="bg-white p-4 rounded shadow hover:shadow-md transition">
-              <Link to={`/event/${ev.id}`} className="text-lg font-semibold text-blue-600 hover:underline">{ev.title}</Link>
+              <div className="flex items-start justify-between">
+                <Link to={`/event/${ev.id}`} className="text-lg font-semibold text-blue-600 hover:underline">{ev.title}</Link>
+                <button
+                  aria-label={isFavorite(ev.id) ? 'Remove from favorites' : 'Add to favorites'}
+                  onClick={() => { toggleFavorite(ev.id); /* force rerender */ setEvents(e => [...e]); }}
+                  className={`ml-3 text-sm ${isFavorite(ev.id) ? 'text-yellow-500' : 'text-gray-400'} hover:text-yellow-600`}
+                  title={isFavorite(ev.id) ? 'Favorited' : 'Add to favorites'}
+                >★</button>
+              </div>
               <p className="text-gray-600">{ev.location_name}</p>
               <p className="text-gray-500">
                 {format(new Date(ev.start_date), 'h:mm a')} - {format(new Date(ev.end_date), 'h:mm a')}

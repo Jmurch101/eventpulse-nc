@@ -5,6 +5,7 @@ import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import NCMap from '../components/NCMap';
 import { downloadICS } from '../utils/exporters';
+import { isFavorite, toggleFavorite } from '../utils/favorites';
 
 const EventDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -72,8 +73,12 @@ const EventDetailsPage: React.FC = () => {
             </a>
           )}
         </div>
-        <div className="pt-2">
+        <div className="pt-2 flex items-center gap-3">
           <button onClick={() => downloadICS([event], `event_${event.id}.ics`, event.title)} className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 text-sm">Add to Calendar (ICS)</button>
+          <button
+            onClick={() => { toggleFavorite(event.id); window.alert(isFavorite(event.id) ? 'Removed from favorites' : 'Added to favorites'); }}
+            className="px-3 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-sm"
+          >★ Favorite</button>
         </div>
       </div>
 

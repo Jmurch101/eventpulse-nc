@@ -1,3 +1,12 @@
+:root {
+  --print-hide: initial;
+}
+
+@media print {
+  nav, .skip-link, .no-print, button, .App header, footer { display: none !important; }
+  a { color: black; text-decoration: none; }
+  .print-only { display: block !important; }
+}
 .App {
   text-align: center;
 }
