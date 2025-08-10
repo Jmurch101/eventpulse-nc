@@ -131,7 +131,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-6" role="region" aria-label="Advanced search filters">
       {/* Search Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -163,6 +163,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
             value={filters.query}
             onChange={(e) => handleFilterChange('query', e.target.value)}
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            aria-label="Search query"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">🔍</span>
         </div>
@@ -211,6 +212,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
                     start: e.target.value
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  aria-label="Start date"
                 />
               </div>
               <div>
@@ -225,6 +227,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
                     end: e.target.value
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  aria-label="End date"
                 />
               </div>
             </div>
@@ -248,6 +251,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
                     city: e.target.value
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  aria-label="City"
                 >
                   <option value="">All Cities</option>
                   {cityOptions.map((city) => (
@@ -272,6 +276,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
                     radius: parseInt(e.target.value)
                   })}
                   className="w-full"
+                  aria-label="Radius in miles"
                 />
                 <div className="text-xs text-gray-500 mt-1">
                   {filters.location.radius} miles

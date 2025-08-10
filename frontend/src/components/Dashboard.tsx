@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto font-sans">
       {/* Top Navigation */}
-       <nav className="flex justify-between items-center mb-6">
+       <nav role="navigation" aria-label="Primary" className="flex justify-between items-center mb-6">
         <Link to="/" className="text-2xl font-bold text-blue-500">
           EventPulse NC
         </Link>

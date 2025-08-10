@@ -144,7 +144,7 @@ const AnalyticsDashboard: React.FC = () => {
         {/* Presented By (always visible) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg shadow p-4 flex items-center justify-center gap-3">
-            <div className="text-right">
+              <div className="text-right" aria-label="Presented by Intelligent Systems Lab, Fayetteville State University">
               <div className="text-xs uppercase tracking-wide text-gray-500">Presented by</div>
               <div className="text-sm font-semibold text-gray-800">Intelligent Systems Lab</div>
               <div className="text-xs text-gray-600">Fayetteville State University</div>
