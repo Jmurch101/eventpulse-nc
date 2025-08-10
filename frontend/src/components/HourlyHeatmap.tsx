@@ -48,14 +48,7 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
           {collapsed ? 'Expand' : 'Collapse'}
         </button>
       </div>
-      {!compact && (
-        <div className="mb-1 text-[11px] text-gray-600">
-          Time runs left to right (0–23). Days run top to bottom (Sun–Sat). Darker cells mean more events.
-        </div>
-      )}
-      {!compact && (
-        <div className="mb-2 text-[10px] text-gray-500">Tip: Left‑click a calendar day to see its events listed below.</div>
-      )}
+      {/* no global header or legend to keep compact */}
       {!collapsed && (
         <div style={{ overflowX: 'auto' }}>
           <div
@@ -63,26 +56,18 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
             style={{
               gridTemplateColumns: `${compact ? '64px repeat(24, 48px)' : '72px repeat(24, 56px)'}`,
               gap: 0,
-              rowGap: 10,
+              rowGap: 12,
               whiteSpace: 'nowrap'
             }}
           >
-            {/* Header row */}
-            <div className="bg-gray-50 border-b border-gray-300" />
-            {Array.from({ length: 24 }).map((_, hr) => (
-              <div key={`h-${hr}`} className="text-[10px] text-gray-700 bg-gray-50 border-b border-l border-gray-300 flex items-center justify-center" style={{ height: cellSize + 6 }}>
-                {hourHeader(hr)}
-              </div>
-            ))}
-
-            {/* Day rows */}
+            {/* Day rows with inline hour labels */}
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
               <React.Fragment key={label}>
                 <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end bg-white" style={{ borderTop: '2px solid #cbd5e1' }}>{label}</div>
                 {Array.from({ length: 24 }).map((_, hr) => (
                   <div
                     key={hr}
-                    className="relative"
+                    className="relative flex items-center justify-center"
                     title={`${label} ${hourHeader(hr)} — ${grid[day][hr]} event${grid[day][hr] === 1 ? '' : 's'}`}
                     style={{
                       backgroundColor: colorFor(grid[day][hr]),
@@ -90,23 +75,16 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
                       borderTop: '1px solid #e5e7eb',
                       borderLeft: '1px solid #e5e7eb'
                     }}
-                  />
+                  >
+                    <span className="text-[9px] text-gray-900" style={{ mixBlendMode: 'multiply' }}>{hourHeader(hr)}</span>
+                  </div>
                 ))}
               </React.Fragment>
             ))}
           </div>
         </div>
       )}
-      {!compact && !collapsed && (
-        <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-600 flex-wrap">
-          <span className="font-medium">Legend:</span>
-          <span className="inline-flex items-center gap-1"><span style={{ width: 12, height: 12, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 2 }}></span>0</span>
-          <span className="inline-flex items-center gap-1"><span style={{ width: 12, height: 12, background: '#bfdbfe', border: '1px solid #e5e7eb', borderRadius: 2 }}></span>1–2</span>
-          <span className="inline-flex items-center gap-1"><span style={{ width: 12, height: 12, background: '#60a5fa', border: '1px solid #e5e7eb', borderRadius: 2 }}></span>3–5</span>
-          <span className="inline-flex items-center gap-1"><span style={{ width: 12, height: 12, background: '#2563eb', border: '1px solid #e5e7eb', borderRadius: 2 }}></span>6–10</span>
-          <span className="inline-flex items-center gap-1"><span style={{ width: 12, height: 12, background: '#1e40af', border: '1px solid #e5e7eb', borderRadius: 2 }}></span>10+</span>
-        </div>
-      )}
+      {/* legend removed per spec */}
     </div>
   );
 };
