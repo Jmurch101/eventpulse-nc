@@ -468,21 +468,8 @@ app.get('/api/analytics', async (req, res) => {
         
         completedQueries++;
         if (completedQueries === analyticsQueries.length) {
-          // Add mock data for features not yet implemented
-          results.popularEvents = [
-            { id: 1, title: 'NC State Engineering Career Fair', views: 1245, event_type: 'academic' },
-            { id: 2, title: 'Raleigh City Council Meeting', views: 892, event_type: 'government' },
-            { id: 3, title: 'Triangle Tech Meetup', views: 756, event_type: 'tech' },
-            { id: 4, title: 'Durham Farmers Market', views: 634, event_type: 'community' },
-            { id: 5, title: 'UNC Research Symposium', views: 523, event_type: 'academic' }
-          ];
-          
-          results.performanceMetrics = {
-            avgLoadTime: 1.2,
-            apiResponseTime: 0.8,
-            cacheHitRate: 85.5,
-            errorRate: 0.3
-          };
+          // Derive minimal extras from real data only
+          results.popularEvents = [];
           
           res.json(results);
         }

@@ -26,12 +26,9 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
         // Try to get 2026 events first, then fall back to all events
         let data: Event[];
         try {
-          data = await eventService.getEvents(); // Get all events since they're in 2026
-          console.log(`✅ Loaded ${data.length} events for heatmap`);
-        } catch (err) {
-          console.log('⚠️ Could not get events, trying fallback');
           data = await eventService.getEvents();
-          console.log(`✅ Loaded ${data.length} total events for heatmap`);
+        } catch (err) {
+          data = await eventService.getEvents();
         }
         
         // Apply simple validation and then category filter
@@ -59,14 +56,7 @@ const InteractiveHeatMap: React.FC<InteractiveHeatMapProps> = ({ selectedDate, o
         });
         setEventCounts(counts);
         
-        // Debug: Log some event counts
-        const totalDates = Object.keys(counts).length;
-        const totalEvents = Object.values(counts).reduce((sum, count) => sum + count, 0);
-        console.log(`📊 Heatmap stats: ${totalEvents} events across ${totalDates} dates`);
-        
-        // Log some sample dates with events
-        const sampleDates = Object.entries(counts).slice(0, 5);
-        console.log('📅 Sample dates with events:', sampleDates);
+        // counts calculated
         
       } catch (error) {
         console.error('❌ Error fetching events for heat map:', error);
