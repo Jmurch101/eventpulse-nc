@@ -5,6 +5,7 @@ import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import NCMap from '../components/NCMap';
 import HourlyHeatmap from '../components/HourlyHeatmap';
+import { downloadICS } from '../utils/exporters';
 
 const DayEventsPage: React.FC = () => {
   const { date } = useParams<{ date: string }>();
@@ -53,6 +54,7 @@ const DayEventsPage: React.FC = () => {
         <h1 className="text-2xl font-bold">Events on {date}</h1>
         <div className="flex items-center gap-3">
           <button onClick={exportDayAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 text-sm">Export CSV</button>
+          <button onClick={() => downloadICS(events, `eventpulse_${date}.ics`, `EventPulse NC - ${date}`)} className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 text-sm">Export ICS</button>
           <Link to="/" className="text-blue-500 hover:underline">Back to Dashboard</Link>
         </div>
       </div>

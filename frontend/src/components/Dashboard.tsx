@@ -10,6 +10,7 @@ import BubbleCluster from './BubbleCluster';
 import { format } from 'date-fns';
 import { eventService } from '../services/api';
 import { Event } from '../types/Event';
+import { downloadICS } from '../utils/exporters';
 
 const Dashboard: React.FC = () => {
   const [view, setView] = useState<'events' | 'holidays' | 'map'>('events');
@@ -202,6 +203,10 @@ const Dashboard: React.FC = () => {
           </button>
            <button onClick={exportFilteredAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600">
              Export CSV
+           </button>
+           <button onClick={() => downloadICS(filteredEvents, 'eventpulse_filtered.ics', 'EventPulse NC - Filtered')}
+             className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600">
+             Export ICS
            </button>
         </div>
       </nav>
