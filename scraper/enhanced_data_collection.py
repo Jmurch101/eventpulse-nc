@@ -9,7 +9,7 @@ import random
 from datetime import datetime, timedelta
 import time
 
-API_URL = "http://localhost:3001/api/events"
+API_URL = os.getenv("API_URL", "http://localhost:3001")
 
 # Event templates for better variety
 event_templates = [
@@ -139,7 +139,7 @@ def generate_events_for_month(year, month, num_events=100):
 def post_event(event):
     """Post a single event to the API"""
     try:
-        response = requests.post(API_URL, json=event)
+        response = requests.post(f"{API_URL}/api/events", json=event)
         if response.status_code == 201:
             print(f"✅ Posted: {event['title']}")
             return True
@@ -172,25 +172,17 @@ def main():
     print(f"   - August 2025: {len(august_events)} events")
     print(f"   - September 2025: {len(september_events)} events")
     print(f"   - October 2025: {len(october_events)} events")
-    print("📤 Posting events to API...")
+    print("📤 Posting events to API (batch mode)...")
     
-    successful_posts = 0
-    skipped_posts = 0
-    
-    for i, event in enumerate(all_events, 1):
-        if post_event(event):
-            successful_posts += 1
-        else:
-            skipped_posts += 1
-        
-        # Add a small delay to avoid overwhelming the API
-        if i % 10 == 0:
-            time.sleep(0.1)
-    
-    print(f"\n🎉 Data collection complete!")
-    print(f"✅ Successfully posted: {successful_posts} events")
-    print(f"⏭️  Skipped (duplicates): {skipped_posts} events")
-    print(f"📊 Total events in database: {successful_posts + skipped_posts}")
+    # Batch post to reduce API overhead
+    try:
+        resp = requests.post(f"{API_URL}/api/events/batch", json={"events": all_events}, timeout=30)
+        resp.raise_for_status()
+        stats = resp.json()
+        print(f"\n🎉 Data collection complete!")
+        print(f"📦 Received: {stats.get('received')} • ✅ Inserted: {stats.get('inserted')} • ⏭️ Duplicates: {stats.get('duplicates')} • ❌ Failed: {stats.get('failed')}")
+    except Exception as e:
+        print(f"❌ Batch post failed: {e}")
     print(f"🗓️  Events now available for August, September, and October 2025!")
 
 if __name__ == "__main__":

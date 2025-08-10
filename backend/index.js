@@ -223,6 +223,61 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
+// Batch ingest events
+app.post('/api/events/batch', async (req, res) => {
+  try {
+    const events = Array.isArray(req.body?.events) ? req.body.events : [];
+    if (events.length === 0) {
+      return res.status(400).json({ error: 'No events provided' });
+    }
+
+    let inserted = 0;
+    let duplicates = 0;
+    let failed = 0;
+
+    const insertOne = (e) => new Promise((resolve) => {
+      const {
+        title, description, start_date, end_date, location_name,
+        latitude, longitude, organization_id, event_type, source_url
+      } = e;
+
+      if (!title || !start_date || !end_date) {
+        failed++; return resolve();
+      }
+
+      db.get('SELECT id FROM events WHERE title = ? AND start_date = ?', [title, start_date], (err, existing) => {
+        if (err) { failed++; return resolve(); }
+        if (existing) { duplicates++; return resolve(); }
+
+        const insertQuery = `
+          INSERT INTO events (
+            title, description, start_date, end_date, location_name,
+            latitude, longitude, organization_id, event_type, source_url
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const params = [
+          title, description || '', start_date, end_date, location_name || '',
+          Number(latitude) || 0, Number(longitude) || 0, organization_id || 1, event_type || 'other', source_url || ''
+        ];
+        db.run(insertQuery, params, function(err2) {
+          if (err2) { failed++; } else { inserted++; }
+          resolve();
+        });
+      });
+    });
+
+    for (const e of events) { // sequential to avoid SQLite busy
+      // eslint-disable-next-line no-await-in-loop
+      await insertOne(e);
+    }
+
+    res.json({ received: events.length, inserted, duplicates, failed });
+  } catch (error) {
+    console.error('Batch ingest error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Cleanup old events endpoint (older than 3 months)
 app.post('/api/events/cleanup-old', async (req, res) => {
   try {
