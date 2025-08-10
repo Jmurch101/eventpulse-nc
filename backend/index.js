@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const db = require('./db');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,10 @@ app.use(morgan('combined'));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Basic rate limiting
+const limiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
+app.use(limiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
