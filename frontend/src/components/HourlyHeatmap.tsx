@@ -28,18 +28,18 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events }) => {
   };
 
   return (
-    <div>
-      <div className="mb-2 text-sm text-gray-700">Weekly Hourly Heatmap</div>
-      <div className="grid" style={{ gridTemplateColumns: '80px repeat(24, minmax(22px, 1fr))', gap: 2 }}>
+    <div className="text-xs">
+      <div className="mb-1 text-gray-700">Weekly Hourly Heatmap</div>
+      <div className="grid" style={{ gridTemplateColumns: '64px repeat(24, minmax(16px, 1fr))', gap: 1 }}>
         <div></div>
         {Array.from({ length: 24 }).map((_, hr) => (
-          <div key={hr} className="text-[10px] text-center text-gray-600">{hr}</div>
+          <div key={hr} className="text-[9px] text-center text-gray-600">{hr}</div>
         ))}
         {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
           <React.Fragment key={label}>
-            <div className="text-xs text-gray-700 pr-2 flex items-center justify-end">{label}</div>
+            <div className="text-[10px] text-gray-700 pr-1 flex items-center justify-end">{label}</div>
             {Array.from({ length: 24 }).map((_, hr) => (
-              <div key={hr} className="rounded" style={{ backgroundColor: colorFor(grid[day][hr]), height: 18 }} />
+              <div key={hr} className="rounded" style={{ backgroundColor: colorFor(grid[day][hr]), height: 12 }} />
             ))}
           </React.Fragment>
         ))}

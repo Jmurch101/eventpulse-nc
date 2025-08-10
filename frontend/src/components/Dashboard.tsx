@@ -156,8 +156,8 @@ const Dashboard: React.FC = () => {
               setSelectedCategory('all');
             }}
           />
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="md:w-1/3 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="md:w-1/3 space-y-3">
               <CategoryBubbles
                 onCategorySelect={handleCategorySelect}
                 selectedCategory={selectedCategory}
@@ -171,7 +171,7 @@ const Dashboard: React.FC = () => {
                 onOpenMapForDate={(d) => setMapOverlayDate(d)}
                 selectedEventTypes={selectedEventTypes}
               />
-              <div className="mt-4">
+              <div className="mt-3">
                 <HourlyHeatmap events={filteredEvents} />
               </div>
             </div>

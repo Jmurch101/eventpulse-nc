@@ -20,7 +20,7 @@ const BubbleCluster: React.FC<BubbleClusterProps> = ({ countsByType, onSelect })
 
   useEffect(() => {
     if (!svgRef.current) return;
-    const width = 360, height = 260;
+    const width = 300, height = 200;
     const root = d3.hierarchy({ children: data } as any).sum((d: any) => d.value);
     const pack = d3.pack<any>().size([width, height]).padding(6);
     const nodes = pack(root).leaves();
@@ -49,8 +49,8 @@ const BubbleCluster: React.FC<BubbleClusterProps> = ({ countsByType, onSelect })
 
   return (
     <div className="bg-white rounded-lg shadow p-3">
-      <div className="text-sm font-semibold text-gray-800 mb-2">Event Types</div>
-      <svg ref={svgRef} width="100%" height="260" />
+      <div className="text-xs font-semibold text-gray-800 mb-1">Event Types</div>
+      <svg ref={svgRef} width="100%" height="200" />
     </div>
   );
 };
