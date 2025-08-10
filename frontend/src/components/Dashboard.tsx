@@ -35,6 +35,34 @@ const Dashboard: React.FC = () => {
 
   const [mapOverlayDate, setMapOverlayDate] = useState<Date | null>(null);
 
+  // City centers for radius filtering (miles)
+  const CITY_CENTERS = useMemo(() => ({
+    raleigh: { lat: 35.7796, lon: -78.6382 },
+    durham: { lat: 35.9940, lon: -78.8986 },
+    chapel_hill: { lat: 35.9132, lon: -79.0558 },
+    cary: { lat: 35.7915, lon: -78.7811 },
+    morrisville: { lat: 35.8235, lon: -78.8256 },
+    apex: { lat: 35.7327, lon: -78.8503 },
+    holly_springs: { lat: 35.6513, lon: -78.8336 },
+    fuquay_varina: { lat: 35.5843, lon: -78.8000 },
+    charlotte: { lat: 35.2271, lon: -80.8431 },
+    greensboro: { lat: 36.0726, lon: -79.7920 },
+    asheville: { lat: 35.5951, lon: -82.5515 },
+    fayetteville: { lat: 35.0527, lon: -78.8784 },
+  }), []);
+
+  const milesBetween = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 3958.8; // miles
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   const handleSearch = (filters: SearchFilters) => {
     setActiveFilters(filters);
     setSelectedEventTypes(filters.eventTypes);
@@ -93,13 +121,50 @@ const Dashboard: React.FC = () => {
         return true;
       });
     }
-    // city filter (simple substring match)
+    // city + radius filter (haversine). Fallback to substring match if missing coordinates
     if (activeFilters && activeFilters.location.city) {
-      const cityKey = activeFilters.location.city.replace('_', ' ').toLowerCase();
-      list = list.filter(ev => (ev.location_name || '').toLowerCase().includes(cityKey));
+      const key = activeFilters.location.city as keyof typeof CITY_CENTERS;
+      const center = CITY_CENTERS[key];
+      const radiusMiles = activeFilters.location.radius || 25;
+      if (center) {
+        list = list.filter(ev => {
+          const hasCoords = Number.isFinite(ev.latitude) && Number.isFinite(ev.longitude) && Math.abs(ev.latitude) <= 90 && Math.abs(ev.longitude) <= 180;
+          if (hasCoords) {
+            return milesBetween(center.lat, center.lon, ev.latitude, ev.longitude) <= radiusMiles;
+          }
+          // fallback substring
+          const cityLabel = key.replace('_', ' ').toLowerCase();
+          return (ev.location_name || '').toLowerCase().includes(cityLabel);
+        });
+      }
     }
     return list;
-  }, [allEvents, selectedEventTypes, activeFilters]);
+  }, [allEvents, selectedEventTypes, activeFilters, CITY_CENTERS]);
+
+  // Export CSV for current filtered events
+  const exportFilteredAsCSV = () => {
+    const rows = [
+      ['Title', 'Start', 'End', 'Location', 'Type', 'Source URL'],
+      ...filteredEvents.map(ev => [
+        ev.title,
+        new Date(ev.start_date).toISOString(),
+        new Date(ev.end_date).toISOString(),
+        ev.location_name || '',
+        ev.event_type,
+        ev.source_url || ''
+      ])
+    ];
+    const csv = rows.map(r => r.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eventpulse_export_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const countsByType = useMemo(() => {
     const m: Record<string, number> = {};
@@ -112,11 +177,11 @@ const Dashboard: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto font-sans">
       {/* Top Navigation */}
-      <nav className="flex justify-between items-center mb-6">
+       <nav className="flex justify-between items-center mb-6">
         <Link to="/" className="text-2xl font-bold text-blue-500">
           EventPulse NC
         </Link>
-        <div className="flex space-x-4">
+         <div className="flex space-x-2">
           <Link to="/analytics" className="text-gray-600 hover:text-gray-800">
             Analytics
           </Link>
@@ -135,6 +200,9 @@ const Dashboard: React.FC = () => {
           }>
             Map
           </button>
+           <button onClick={exportFilteredAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600">
+             Export CSV
+           </button>
         </div>
       </nav>
       {/* Tagline */}

@@ -11,6 +11,30 @@ const DayEventsPage: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const exportDayAsCSV = () => {
+    const rows = [
+      ['Title', 'Start', 'End', 'Location', 'Type', 'Source URL'],
+      ...events.map(ev => [
+        ev.title,
+        new Date(ev.start_date).toISOString(),
+        new Date(ev.end_date).toISOString(),
+        ev.location_name || '',
+        ev.event_type,
+        ev.source_url || ''
+      ])
+    ];
+    const csv = rows.map(r => r.map(f => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `eventpulse_${date}_export.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -27,7 +51,10 @@ const DayEventsPage: React.FC = () => {
     <div className="p-6 max-w-4xl mx-auto font-sans">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Events on {date}</h1>
-        <Link to="/" className="text-blue-500 hover:underline">Back to Dashboard</Link>
+        <div className="flex items-center gap-3">
+          <button onClick={exportDayAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 text-sm">Export CSV</button>
+          <Link to="/" className="text-blue-500 hover:underline">Back to Dashboard</Link>
+        </div>
       </div>
       {/* Hourly heat grid */}
       <div className="mb-4">
