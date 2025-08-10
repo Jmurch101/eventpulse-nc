@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import AdvancedSearch from './AdvancedSearch';
+import AdvancedSearch, { SearchFilters } from './AdvancedSearch';
 import CategoryBubbles from './CategoryBubbles';
 import InteractiveHeatMap from './InteractiveHeatMap';
 import NCMap from './NCMap';
+import DayMapModal from './DayMapModal';
 import HourlyHeatmap from './HourlyHeatmap';
 import BubbleCluster from './BubbleCluster';
 import { format } from 'date-fns';
@@ -18,6 +19,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<'live' | 'all'>('live');
+  const [activeFilters, setActiveFilters] = useState<SearchFilters | null>(null);
   const navigate = useNavigate();
 
   // categories drive selectedEventTypes; no modal needed
@@ -33,7 +35,8 @@ const Dashboard: React.FC = () => {
 
   const [mapOverlayDate, setMapOverlayDate] = useState<Date | null>(null);
 
-  const handleSearch = (filters: any) => {
+  const handleSearch = (filters: SearchFilters) => {
+    setActiveFilters(filters);
     setSelectedEventTypes(filters.eventTypes);
   };
 
@@ -74,9 +77,29 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const filteredEvents = useMemo(() => {
-    if (!selectedEventTypes || selectedEventTypes.length === 0) return allEvents;
-    return allEvents.filter(ev => selectedEventTypes.includes(ev.event_type));
-  }, [allEvents, selectedEventTypes]);
+    let list = allEvents;
+    // event types
+    if (selectedEventTypes && selectedEventTypes.length > 0) {
+      list = list.filter(ev => selectedEventTypes.includes(ev.event_type));
+    }
+    // date range
+    if (activeFilters && (activeFilters.dateRange.start || activeFilters.dateRange.end)) {
+      const start = activeFilters.dateRange.start ? new Date(activeFilters.dateRange.start) : null;
+      const end = activeFilters.dateRange.end ? new Date(activeFilters.dateRange.end) : null;
+      list = list.filter(ev => {
+        const d = new Date(ev.start_date);
+        if (start && d < start) return false;
+        if (end && d > end) return false;
+        return true;
+      });
+    }
+    // city filter (simple substring match)
+    if (activeFilters && activeFilters.location.city) {
+      const cityKey = activeFilters.location.city.replace('_', ' ').toLowerCase();
+      list = list.filter(ev => (ev.location_name || '').toLowerCase().includes(cityKey));
+    }
+    return list;
+  }, [allEvents, selectedEventTypes, activeFilters]);
 
   const countsByType = useMemo(() => {
     const m: Record<string, number> = {};
@@ -156,8 +179,10 @@ const Dashboard: React.FC = () => {
         </div>
       ) : view === 'holidays' ? (
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Holidays Heatmap: show only holiday events */}
           <div className="md:flex-1">
+            <div className="mb-4 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+              Holidays view shows official and academic breaks across NC. Click a date to see all holiday events; right‑click to open the holiday map.
+            </div>
             <InteractiveHeatMap
               onDateSelect={handleDateSelect}
               onOpenMapForDate={(d) => setMapOverlayDate(d)}
@@ -199,18 +224,12 @@ const Dashboard: React.FC = () => {
       )}
       {/* no modal: use separate page for day events */}
       {mapOverlayDate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setMapOverlayDate(null)}>
-          <div className="bg-white rounded-lg shadow-xl p-4 w-11/12 max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-lg font-semibold">Events on {format(mapOverlayDate, 'MMMM d, yyyy')}</div>
-              <button className="text-gray-600 hover:text-gray-900" onClick={() => setMapOverlayDate(null)}>Close</button>
-            </div>
-            <NCMap
-              events={filteredEvents.filter(ev => format(new Date(ev.start_date), 'yyyy-MM-dd') === format(mapOverlayDate, 'yyyy-MM-dd'))}
-              mode={'all'}
-            />
-          </div>
-        </div>
+        <DayMapModal
+          isOpen={true}
+          onClose={() => setMapOverlayDate(null)}
+          selectedDate={mapOverlayDate}
+          events={filteredEvents}
+        />
       )}
     </div>
   );

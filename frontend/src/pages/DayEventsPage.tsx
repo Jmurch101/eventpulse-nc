@@ -56,6 +56,13 @@ const DayEventsPage: React.FC = () => {
               <p className="text-gray-500">
                 {format(new Date(ev.start_date), 'h:mm a')} - {format(new Date(ev.end_date), 'h:mm a')}
               </p>
+              {ev.source_url && (
+                <p className="mt-2 text-sm">
+                  <a className="text-blue-600 hover:underline" href={ev.source_url} target="_blank" rel="noreferrer">
+                    Official source
+                  </a>
+                </p>
+              )}
             </li>
           ))}
         </ul>

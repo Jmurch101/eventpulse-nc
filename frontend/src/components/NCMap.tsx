@@ -103,6 +103,13 @@ export const NCMap: React.FC<NCMapProps> = ({ events, mode = 'live' }) => {
                     {label}
                   </div>
                 )}
+                {ev.source_url && (
+                  <div style={{ marginTop: 8 }}>
+                    <a href={ev.source_url} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 600, fontSize: 12 }}>
+                      Official source
+                    </a>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
