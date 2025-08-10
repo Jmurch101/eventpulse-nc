@@ -287,7 +287,6 @@ app.post('/api/events/batch', async (req, res) => {
       if (!Number.isFinite(eMs)) { failed++; ingestStats.reasons.invalid_date++; return resolve(); }
       if (eMs <= sMs) { failed++; ingestStats.reasons.invalid_order++; return resolve(); }
       if ((eMs - sMs) > (14*60*60*1000)) { failed++; ingestStats.reasons.too_long++; return resolve(); }
-      }
 
       // Validate coordinates if present
       const latOkB = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
@@ -351,6 +350,74 @@ app.post('/api/events/cleanup-old', async (req, res) => {
     });
   } catch (error) {
     console.error('API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Cleanup clearly test/sample events
+app.post('/api/admin/cleanup-test', async (req, res) => {
+  try {
+    const dryRun = Boolean(req.query.dryRun);
+    const SAMPLE_PATTERN = 'https://eventpulse-nc.com/%';
+    const countQuery = `SELECT COUNT(*) as cnt FROM events WHERE source_url LIKE ?`;
+    db.get(countQuery, [SAMPLE_PATTERN], (err, row) => {
+      if (err) {
+        console.error('Database error (count test):', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      const toDelete = row?.cnt || 0;
+      if (dryRun || toDelete === 0) {
+        return res.json({ wouldDelete: toDelete, deleted: 0, dryRun: true });
+      }
+      const delQuery = `DELETE FROM events WHERE source_url LIKE ?`;
+      db.run(delQuery, [SAMPLE_PATTERN], function(err2) {
+        if (err2) {
+          console.error('Database error (delete test):', err2);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ deleted: this.changes });
+      });
+    });
+  } catch (error) {
+    console.error('Cleanup test API error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Cleanup invalid events currently in DB (duration >14h, end<=start, invalid coords)
+app.post('/api/admin/cleanup-invalid', async (req, res) => {
+  try {
+    // Select invalid ids first
+    const selectInvalid = `
+      SELECT id, start_date, end_date, latitude, longitude FROM events
+    `;
+    db.all(selectInvalid, (err, rows) => {
+      if (err) {
+        console.error('Database error (select invalid):', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      const invalidIds = [];
+      for (const r of rows) {
+        const s = Date.parse(r.start_date);
+        const e = Date.parse(r.end_date);
+        const badTime = !Number.isFinite(s) || !Number.isFinite(e) || e <= s || (e - s) > (14*60*60*1000);
+        const badCoords = (r.latitude != null && (!Number.isFinite(r.latitude) || Math.abs(r.latitude) > 90)) ||
+                          (r.longitude != null && (!Number.isFinite(r.longitude) || Math.abs(r.longitude) > 180));
+        if (badTime || badCoords) invalidIds.push(r.id);
+      }
+      if (invalidIds.length === 0) return res.json({ deleted: 0 });
+      const placeholders = invalidIds.map(() => '?').join(',');
+      const delSql = `DELETE FROM events WHERE id IN (${placeholders})`;
+      db.run(delSql, invalidIds, function(err2) {
+        if (err2) {
+          console.error('Database error (delete invalid):', err2);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ deleted: this.changes });
+      });
+    });
+  } catch (error) {
+    console.error('Cleanup invalid API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
