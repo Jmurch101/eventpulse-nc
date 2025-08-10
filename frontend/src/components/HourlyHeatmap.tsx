@@ -6,9 +6,10 @@ interface HourlyHeatmapProps {
   weekStart?: Date; // optional start of the week; if omitted, uses events' week span
   compact?: boolean;
   defaultCollapsed?: boolean;
+  showHourLabels?: boolean;
 }
 
-const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, defaultCollapsed = false }) => {
+const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, defaultCollapsed = false, showHourLabels = true }) => {
   const [collapsed, setCollapsed] = useState<boolean>(defaultCollapsed);
   const grid = useMemo(() => {
     // 7 days x 24 hours counts
@@ -30,11 +31,8 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
     return '#1e40af';
   };
 
-  const hourHeader = (hr: number) => {
-    if (!compact) return hr;
-    // compact: show only 0, 6, 12, 18
-    return [0, 6, 12, 18].includes(hr) ? hr : '';
-  };
+  const hourHeader = (hr: number) => hr;
+  const cellSize = compact ? 14 : 16;
 
   return (
     <div className="text-xs">
@@ -53,26 +51,31 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ events, compact = false, 
         <div className="mb-2 text-[10px] text-gray-500">Tip: Left‑click a calendar day to see its events listed below.</div>
       )}
       {!collapsed && (
-        <div className="grid" style={{ gridTemplateColumns: `${compact ? '48px repeat(24, minmax(10px, 1fr))' : '56px repeat(24, minmax(14px, 1fr))'}`, gap: compact ? 1 : 1 }}>
-          <div className="text-[10px] text-gray-500 flex items-center justify-end pr-1">Day</div>
+        <div className="grid border border-gray-300 rounded" style={{ gridTemplateColumns: `${compact ? '48px repeat(24, minmax(12px, 1fr))' : '56px repeat(24, minmax(14px, 1fr))'}`, gap: 0 }}>
+          <div className="text-[10px] text-gray-600 flex items-center justify-end pr-1 bg-gray-50 border-b border-gray-300">Day</div>
           {Array.from({ length: 24 }).map((_, hr) => (
-            <div key={hr} className="text-[9px] text-center text-gray-600">{hourHeader(hr)}</div>
+            <div key={hr} className="text-[9px] text-center text-gray-700 bg-gray-50 border-b border-l border-gray-300" style={{ lineHeight: `${cellSize}px`, height: cellSize }}>{hourHeader(hr)}</div>
           ))}
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((label, day) => (
             <React.Fragment key={label}>
-              <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end">{label}</div>
+              <div className="text-[10px] text-gray-800 font-medium pr-1 flex items-center justify-end border-t border-gray-300 bg-white">{label}</div>
               {Array.from({ length: 24 }).map((_, hr) => (
                 <div
                   key={hr}
-                  className="rounded relative"
+                  className="relative"
                   title={`${label} ${hr}:00 — ${grid[day][hr]} event${grid[day][hr] === 1 ? '' : 's'}`}
                   style={{
                     backgroundColor: colorFor(grid[day][hr]),
-                    height: compact ? 8 : 10,
-                    border: '1px solid #e5e7eb'
+                    height: cellSize,
+                    borderTop: '1px solid #d1d5db',
+                    borderLeft: '1px solid #d1d5db'
                   }}
                 >
-                  {!compact && <span className="absolute left-0.5 top-0.5 text-[8px] text-gray-500">{hr}</span>}
+                  {showHourLabels && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[8px] text-gray-700" style={{ lineHeight: 1 }}>
+                      {hr}
+                    </span>
+                  )}
                 </div>
               ))}
             </React.Fragment>
