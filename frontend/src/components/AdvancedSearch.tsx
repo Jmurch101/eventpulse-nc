@@ -22,6 +22,7 @@ export interface SearchFilters {
     max: number;
   };
   tags: string[];
+  orgId?: number;
 }
 
 const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) => {
@@ -41,8 +42,21 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
       min: 0,
       max: 1000
     },
-    tags: []
+    tags: [],
+    orgId: undefined
   });
+
+  const [orgs, setOrgs] = useState<Array<{id:number; name:string; type:string;}>>([]);
+  const API_BASE_URL = (process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com');
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/organizations`);
+        const data = await res.json();
+        if (Array.isArray(data)) setOrgs(data);
+      } catch {}
+    })();
+  }, [API_BASE_URL]);
 
   const eventTypeOptions = [
     { value: 'academic', label: 'Academic', color: 'bg-blue-500' },
@@ -115,7 +129,8 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
         min: 0,
         max: 1000
       },
-      tags: []
+      tags: [],
+      orgId: undefined
     });
     onClear();
   };
@@ -283,6 +298,22 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ onSearch, onClear }) =>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Organization */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Organization</h4>
+            <select
+              value={filters.orgId || ''}
+              onChange={(e) => handleFilterChange('orgId', e.target.value ? Number(e.target.value) : undefined)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-label="Organization"
+            >
+              <option value="">All Organizations</option>
+              {orgs.map(o => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Tags */}

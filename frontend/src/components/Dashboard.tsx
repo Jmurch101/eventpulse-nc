@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
         if (s?.defaultView && !searchParams.get('view')) setView(s.defaultView);
         if (s?.defaultCity && !searchParams.get('city')) {
           setActiveFilters(prev => ({
-            ...(prev || { query: '', eventTypes: [], dateRange: { start: '', end: '' }, location: { city: '', radius: 25 }, price: { min: 0, max: 1000 }, tags: [] }),
+            ...(prev || { query: '', eventTypes: [], dateRange: { start: '', end: '' }, location: { city: '', radius: 25 }, price: { min: 0, max: 1000 }, tags: [], orgId: undefined }),
             location: { city: s.defaultCity, radius: s.defaultRadius || 25 }
           }));
         }
@@ -153,6 +153,8 @@ const Dashboard: React.FC = () => {
     const endParam = searchParams.get('end');
     const qParam = searchParams.get('q');
     const favParam = searchParams.get('fav');
+    const tagsParam = searchParams.get('tags');
+    const orgParam = searchParams.get('org');
 
     if (viewParam && ['events', 'holidays', 'map', 'favorites'].includes(viewParam)) {
       setView(viewParam);
@@ -163,14 +165,15 @@ const Dashboard: React.FC = () => {
       setSelectedEventTypes(t);
     }
 
-    if (cityParam || startParam || endParam || radiusParam || qParam) {
+    if (cityParam || startParam || endParam || radiusParam || qParam || tagsParam || orgParam) {
       setActiveFilters({
         query: qParam || '',
         eventTypes: typesParam ? typesParam.split(',').filter(Boolean) : [],
         dateRange: { start: startParam || '', end: endParam || '' },
         location: { city: cityParam || '', radius: radiusParam ? Number(radiusParam) : 25 },
         price: { min: 0, max: 1000 },
-        tags: []
+        tags: tagsParam ? tagsParam.split(',').filter(Boolean) : [],
+        orgId: orgParam ? Number(orgParam) : undefined
       });
     }
     if (favParam === '1') setOnlyFavorites(true);
@@ -188,6 +191,8 @@ const Dashboard: React.FC = () => {
       if (activeFilters.location.radius) params.radius = String(activeFilters.location.radius);
       if (activeFilters.dateRange.start) params.start = activeFilters.dateRange.start;
       if (activeFilters.dateRange.end) params.end = activeFilters.dateRange.end;
+      if (activeFilters.tags?.length) params.tags = activeFilters.tags.join(',');
+      if (activeFilters.orgId) params.org = String(activeFilters.orgId);
     }
     if (onlyFavorites) params.fav = '1';
     setSearchParams(params);
@@ -212,8 +217,13 @@ const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await eventService.getEvents();
-        // Deduplicate by id and filter invalid
+        const filters: any = { limit: 10000 };
+        if (selectedEventTypes.length > 0) filters.type_in = selectedEventTypes.join(',');
+        if (activeFilters?.query) filters.search = activeFilters.query;
+        if (activeFilters?.dateRange?.start) filters.year = new Date(activeFilters.dateRange.start).getFullYear();
+        if (activeFilters?.tags?.length) filters.tags = activeFilters.tags.join(',');
+        if (activeFilters?.orgId) filters.org_id = activeFilters.orgId;
+        const data = await eventService.getEventsWithFilters(filters);
         const seen = new Set<number>();
         const cleaned = data.filter(ev => {
           if (seen.has(ev.id)) return false;
@@ -227,7 +237,7 @@ const Dashboard: React.FC = () => {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [selectedEventTypes, activeFilters]);
 
   const filteredEvents = useMemo(() => {
     let list = allEvents;
@@ -354,15 +364,17 @@ const Dashboard: React.FC = () => {
              className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600">
              Export ICS
            </button>
-            <a
+             <a
               href={(function(){
                 const base = `${process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com'}/api/events.csv`;
                 const params = new URLSearchParams();
-                if (selectedEventTypes.length > 0) params.set('event_type', selectedEventTypes[0]);
+                if (selectedEventTypes.length > 0) params.set('type_in', selectedEventTypes.join(','));
                 if (activeFilters?.query) params.set('search', activeFilters.query);
                 if (activeFilters?.dateRange?.start) {
                   try { params.set('year', String(new Date(activeFilters.dateRange.start).getFullYear())); } catch {}
                 }
+                if (activeFilters?.tags?.length) params.set('tags', activeFilters.tags.join(','));
+                if (activeFilters?.orgId) params.set('org_id', String(activeFilters.orgId));
                 const qs = params.toString();
                 return qs ? `${base}?${qs}` : base;
               })()}
@@ -373,11 +385,13 @@ const Dashboard: React.FC = () => {
               href={(function(){
                 const base = `${process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com'}/api/events.ics`;
                 const params = new URLSearchParams();
-                if (selectedEventTypes.length > 0) params.set('event_type', selectedEventTypes[0]);
+                if (selectedEventTypes.length > 0) params.set('type_in', selectedEventTypes.join(','));
                 if (activeFilters?.query) params.set('search', activeFilters.query);
                 if (activeFilters?.dateRange?.start) {
                   try { params.set('year', String(new Date(activeFilters.dateRange.start).getFullYear())); } catch {}
                 }
+                if (activeFilters?.tags?.length) params.set('tags', activeFilters.tags.join(','));
+                if (activeFilters?.orgId) params.set('org_id', String(activeFilters.orgId));
                 const qs = params.toString();
                 return qs ? `${base}?${qs}` : base;
               })()}

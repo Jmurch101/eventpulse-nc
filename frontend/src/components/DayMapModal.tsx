@@ -206,6 +206,9 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
                           {recurringMap.has(event.id) && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-800">Recurring</span>
                           )}
+                          {(event.tags || '').split(',').filter(Boolean).slice(0, 2).map(tag => (
+                            <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-800 border border-blue-200">{tag.trim()}</span>
+                          ))}
                         </div>
                       </div>
                       {event.latitude && event.longitude && (

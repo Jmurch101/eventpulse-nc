@@ -11,6 +11,7 @@ export interface Event {
   event_type: 'academic' | 'government' | 'holiday' | 'city';
   source_url: string;
   created_at: string;
+  tags?: string; // comma-separated from backend; optional
 }
 
 export interface EventFilters {

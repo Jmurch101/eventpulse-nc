@@ -39,6 +39,8 @@ const EventDetailsPage: React.FC = () => {
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location_name)}`
       : '';
 
+  const tagList = (event.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
   return (
     <div className="p-6 max-w-3xl mx-auto font-sans">
       <div className="flex items-center justify-between mb-4">
@@ -56,6 +58,13 @@ const EventDetailsPage: React.FC = () => {
         {event.event_type && (
           <div className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-800 text-xs font-medium">
             {event.event_type}
+          </div>
+        )}
+        {tagList.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {tagList.map(tag => (
+              <span key={tag} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[11px]">{tag}</span>
+            ))}
           </div>
         )}
         {event.description && (

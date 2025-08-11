@@ -10,6 +10,33 @@ const { exec } = require('child_process');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Simple rule-based classifier to derive tags from title/description
+function classifyTagsFromText(title = '', description = '') {
+  const text = `${title} ${description}`.toLowerCase();
+  const tagSet = new Set();
+  const rules = [
+    { kw: ['workshop', 'training', 'hands-on', 'bootcamp'], tag: 'workshop' },
+    { kw: ['conference', 'summit', 'symposium', 'expo'], tag: 'conference' },
+    { kw: ['webinar', 'virtual'], tag: 'webinar' },
+    { kw: ['career fair', 'recruiting', 'job fair'], tag: 'career' },
+    { kw: ['council', 'board', 'committee', 'hearing', 'meeting'], tag: 'government' },
+    { kw: ['lecture', 'talk', 'colloquium', 'seminar'], tag: 'academic' },
+    { kw: ['football', 'basketball', 'baseball', 'soccer', 'athletic'], tag: 'athletics' },
+    { kw: ['holiday', 'break', 'closure'], tag: 'holiday' },
+    { kw: ['raleigh'], tag: 'raleigh' },
+    { kw: ['durham'], tag: 'durham' },
+    { kw: ['chapel hill'], tag: 'chapel-hill' },
+    { kw: ['cary'], tag: 'cary' },
+    { kw: ['unc', 'chapel hill'], tag: 'unc' },
+    { kw: ['duke'], tag: 'duke' },
+    { kw: ['ncsu', 'nc state'], tag: 'ncsu' },
+  ];
+  for (const r of rules) {
+    if (r.kw.some(k => text.includes(k))) tagSet.add(r.tag);
+  }
+  return Array.from(tagSet);
+}
+
 // Security middleware
 app.use(helmet());
 
@@ -46,7 +73,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.get('/api/events', async (req, res) => {
   try {
-    const { event_type, search, year, limit = 100, offset = 0 } = req.query;
+    const { event_type, search, year, org_id, type_in, tags, limit = 100, offset = 0 } = req.query;
     
     let query = 'SELECT * FROM events WHERE 1=1';
     const params = [];
@@ -55,11 +82,30 @@ app.get('/api/events', async (req, res) => {
       query += ' AND event_type = ?';
       params.push(event_type);
     }
+    if (type_in) {
+      const list = String(type_in).split(',').map(s => s.trim()).filter(Boolean);
+      if (list.length > 0) {
+        const placeholders = list.map(() => '?').join(',');
+        query += ` AND event_type IN (${placeholders})`;
+        params.push(...list);
+      }
+    }
+    if (org_id) {
+      query += ' AND organization_id = ?';
+      params.push(parseInt(org_id));
+    }
     
     if (search) {
       query += ' AND (title LIKE ? OR description LIKE ? OR location_name LIKE ?)';
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
+    }
+    if (tags) {
+      const tagList = String(tags).split(',').map(s => s.trim()).filter(Boolean);
+      for (const t of tagList) {
+        query += ' AND tags LIKE ?';
+        params.push(`%${t}%`);
+      }
     }
     
     if (year) {
@@ -81,6 +127,37 @@ app.get('/api/events', async (req, res) => {
     console.error('API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Organizations endpoints
+app.get('/api/organizations', (req, res) => {
+  const { type } = req.query;
+  let sql = 'SELECT * FROM organizations';
+  const params = [];
+  if (type) { sql += ' WHERE type = ?'; params.push(type); }
+  sql += ' ORDER BY name ASC';
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
+});
+
+app.post('/api/organizations', (req, res) => {
+  const { name, type, website, contact_info, timezone } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const sql = 'INSERT INTO organizations (name, type, website, contact_info, timezone) VALUES (?, ?, ?, ?, ?)';
+  db.run(sql, [name, type || '', website || '', contact_info || '', timezone || ''], function(err) {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.status(201).json({ id: this.lastID });
+  });
+});
+
+// Event types endpoints
+app.get('/api/event-types', (req, res) => {
+  db.all('SELECT * FROM event_types ORDER BY name ASC', (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(rows);
+  });
 });
 
 // ICS export for filtered events
@@ -283,7 +360,8 @@ app.post('/api/events', async (req, res) => {
       longitude,
       organization_id,
       event_type,
-      source_url
+      source_url,
+      tags
     } = req.body;
     
     // Validation
@@ -343,13 +421,14 @@ app.post('/api/events', async (req, res) => {
       const insertQuery = `
         INSERT INTO events (
           title, description, start_date, end_date, location_name,
-          latitude, longitude, organization_id, event_type, source_url
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          latitude, longitude, organization_id, event_type, source_url, tags
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       const params = [
         title, description, start_date, end_date, location_name,
-        latitude || 0, longitude || 0, organization_id || 1, event_type || 'other', source_url || ''
+        latitude || 0, longitude || 0, organization_id || 1, event_type || 'other', source_url || '',
+        Array.isArray(tags) ? tags.join(',') : (typeof tags === 'string' ? tags : classifyTagsFromText(title, description).join(','))
       ];
       
       db.run(insertQuery, params, function(err) {
@@ -387,7 +466,7 @@ app.post('/api/events/batch', async (req, res) => {
     const insertOne = (e) => new Promise((resolve) => {
       const {
         title, description, start_date, end_date, location_name,
-        latitude, longitude, organization_id, event_type, source_url
+        latitude, longitude, organization_id, event_type, source_url, tags
       } = e;
 
       if (!title || !start_date || !end_date) {
@@ -414,12 +493,13 @@ app.post('/api/events/batch', async (req, res) => {
         const insertQuery = `
           INSERT INTO events (
             title, description, start_date, end_date, location_name,
-            latitude, longitude, organization_id, event_type, source_url
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            latitude, longitude, organization_id, event_type, source_url, tags
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const params = [
           title, description || '', start_date, end_date, location_name || '',
-          Number(latitude) || 0, Number(longitude) || 0, organization_id || 1, event_type || 'other', source_url || ''
+          Number(latitude) || 0, Number(longitude) || 0, organization_id || 1, event_type || 'other', source_url || '',
+          Array.isArray(tags) ? tags.join(',') : (typeof tags === 'string' ? tags : classifyTagsFromText(title, description).join(','))
         ];
         db.run(insertQuery, params, function(err2) {
           if (err2) { failed++; } else { inserted++; ingestStats.totals.inserted++; }
