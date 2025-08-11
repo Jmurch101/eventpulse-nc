@@ -1,7 +1,7 @@
 # scraper/cary_scraper.py
 
 from base_scraper import BaseScraper
-from post_event import post_event
+from api_client import batch_post
 from bs4 import BeautifulSoup
 from dateutil import parser
 from datetime import timedelta
@@ -80,9 +80,6 @@ class CaryCityScraper(BaseScraper):
 
     def run_and_post(self):
         events = self.run()
-        for event in events:
-            try:
-                post_event(event)
-                print(f"✅ Posted: {event['title']}")
-            except Exception as e:
-                print(f"❌ Failed to post Cary event: {e}") 
+        if events:
+            stats = batch_post(events)
+            print("Cary batch:", stats)

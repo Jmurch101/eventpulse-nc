@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import json
-from post_event import post_event
+from api_client import batch_post
 
 class RaleighGovernmentEventsScraper:
     def __init__(self):
@@ -82,12 +82,9 @@ class RaleighGovernmentEventsScraper:
         try:
             events = self.scrape_government_events()
             
-            for event in events:
-                try:
-                    post_event(event)
-                    print(f"✅ Posted: {event['title']}")
-                except Exception as e:
-                    print(f"❌ Failed to post {event['title']}: {str(e)}")
+            if events:
+                stats = batch_post(events)
+                print("Raleigh batch:", stats)
                     
         except Exception as e:
             print(f"❌ Error scraping Raleigh government events: {str(e)}")

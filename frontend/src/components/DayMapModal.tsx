@@ -3,6 +3,7 @@ import { XMarkIcon, MapPinIcon, ClockIcon, CalendarIcon } from '@heroicons/react
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import { Event } from '../types/Event';
 import { format } from 'date-fns';
+import { detectRecurring } from '../utils/recurring';
 
 interface DayMapModalProps {
   isOpen: boolean;
@@ -40,6 +41,8 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
       return true;
     });
   }, [dayEvents, selectedTypes, mode]);
+
+  const recurringMap = useMemo(() => detectRecurring(dayEvents), [dayEvents]);
 
   if (!isOpen || !selectedDate) return null;
 
@@ -200,6 +203,9 @@ const DayMapModal: React.FC<DayMapModalProps> = ({ isOpen, onClose, selectedDate
                           }`}>
                             {getEventTypeName(event.event_type)}
                           </span>
+                          {recurringMap.has(event.id) && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-800">Recurring</span>
+                          )}
                         </div>
                       </div>
                       {event.latitude && event.longitude && (

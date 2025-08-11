@@ -5,6 +5,7 @@ Scales up the database with realistic events to reach 10,000+ events
 """
 
 import requests
+import os
 import random
 from datetime import datetime, timedelta
 import time

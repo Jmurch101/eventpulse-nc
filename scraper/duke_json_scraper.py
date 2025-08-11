@@ -1,5 +1,5 @@
 import requests
-from post_event import post_event
+from api_client import batch_post
 from datetime import datetime, timedelta
 
 class DukeJsonScraper:
@@ -29,6 +29,7 @@ class DukeJsonScraper:
         events = data.get("events", [])
         print(f"✅ Received {len(events)} Duke JSON events")
 
+        payloads = []
         for ev in events:
             title = ev.get("title")
             start = ev.get("start_date")
@@ -36,9 +37,9 @@ class DukeJsonScraper:
             url   = ev.get("url")
             loc   = ev.get("venue", {}).get("name", "Duke University")
 
-            payload = {
+            payloads.append({
                 "title":         title,
-                "description":   ev.get("description", "")[:200],
+                "description":   (ev.get("description") or "")[:500],
                 "start_date":    start,
                 "end_date":      end,
                 "location_name": loc,
@@ -47,5 +48,8 @@ class DukeJsonScraper:
                 "organization_id": self.org_id,
                 "event_type":    self.event_type,
                 "source_url":    url
-            }
-            post_event(payload)
+            })
+
+        if payloads:
+            stats = batch_post(payloads)
+            print("Duke JSON batch:", stats)

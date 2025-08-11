@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { Event } from '../types/Event';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com';
@@ -55,3 +56,16 @@ export const eventService = {
 };
 
 export default api; 
+
+// React Query hooks (opt-in replacement for direct service calls)
+export function useEventsQuery(filters?: any) {
+  return useQuery({
+    queryKey: ['events', filters || {}],
+    queryFn: async () => {
+      if (filters) return eventService.getEventsWithFilters(filters);
+      return eventService.getEvents();
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}

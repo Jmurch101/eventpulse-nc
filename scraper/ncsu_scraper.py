@@ -1,5 +1,5 @@
 from base_scraper import BaseScraper
-from post_event import post_event
+from api_client import batch_post
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from dateutil import parser  # Requires: pip install python-dateutil
@@ -63,5 +63,6 @@ class NCSUScraper(BaseScraper):
 
     def run_and_post(self):
         events = self.run()
-        for event in events:
-            post_event(event)
+        if events:
+            stats = batch_post(events)
+            print("NCSU batch:", stats)

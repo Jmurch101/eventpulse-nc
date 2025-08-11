@@ -4,6 +4,7 @@ import AdvancedSearch, { SearchFilters } from './AdvancedSearch';
 import CategoryBubbles from './CategoryBubbles';
 import InteractiveHeatMap from './InteractiveHeatMap';
 import NCMap from './NCMap';
+import SettingsPanel from './SettingsPanel';
 import DayMapModal from './DayMapModal';
 import HourlyHeatmap from './HourlyHeatmap';
 import BubbleCluster from './BubbleCluster';
@@ -11,9 +12,11 @@ import { format } from 'date-fns';
 import { eventService } from '../services/api';
 import { Event } from '../types/Event';
 import { downloadICS } from '../utils/exporters';
+import { getFavorites } from '../utils/favorites';
+import { detectRecurring } from '../utils/recurring';
 
 const Dashboard: React.FC = () => {
-  const [view, setView] = useState<'events' | 'holidays' | 'map'>('events');
+  const [view, setView] = useState<'events' | 'holidays' | 'map' | 'favorites'>('events');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
   const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -36,6 +39,61 @@ const Dashboard: React.FC = () => {
   };
 
   const [mapOverlayDate, setMapOverlayDate] = useState<Date | null>(null);
+  const [savedViewsMenuOpen, setSavedViewsMenuOpen] = useState(false);
+  const SAVED_VIEWS_KEY = 'eventpulse_saved_views_v1';
+  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(false);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const SETTINGS_KEY = 'eventpulse_settings_v1';
+  type Settings = { defaultView: 'events' | 'holidays' | 'map' | 'favorites'; defaultCity: string; defaultRadius: number };
+
+  type SavedView = {
+    name: string;
+    view: 'events' | 'holidays' | 'map' | 'favorites';
+    selectedEventTypes: string[];
+    activeFilters: SearchFilters | null;
+    timestamp: number;
+    onlyFavorites?: boolean;
+  };
+
+  const getSavedViews = (): SavedView[] => {
+    try {
+      return JSON.parse(localStorage.getItem(SAVED_VIEWS_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  };
+
+  const saveCurrentView = () => {
+    const name = prompt('Save current filters as view name:');
+    if (!name) return;
+    const views = getSavedViews();
+    const payload: SavedView = {
+      name,
+      view,
+      selectedEventTypes,
+      activeFilters,
+      timestamp: Date.now(),
+      onlyFavorites,
+    };
+    const updated = [payload, ...views.filter(v => v.name !== name)];
+    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(updated.slice(0, 25)));
+    setSavedViewsMenuOpen(false);
+    alert('Saved view.');
+  };
+
+  const loadSavedView = (sv: SavedView) => {
+    setView(sv.view);
+    setSelectedEventTypes(sv.selectedEventTypes || []);
+    setActiveFilters(sv.activeFilters || null);
+    setOnlyFavorites(!!sv.onlyFavorites);
+    setSavedViewsMenuOpen(false);
+  };
+
+  const deleteSavedView = (name: string) => {
+    const views = getSavedViews().filter(v => v.name !== name);
+    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(views));
+    setSavedViewsMenuOpen(false);
+  };
 
   // City centers for radius filtering (miles)
   const CITY_CENTERS = useMemo(() => ({
@@ -72,14 +130,31 @@ const Dashboard: React.FC = () => {
 
   // Initialize state from URL search params
   useEffect(() => {
-    const viewParam = searchParams.get('view') as 'events' | 'holidays' | 'map' | null;
+    // Load defaults first
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const s: Settings = JSON.parse(raw);
+        if (s?.defaultView && !searchParams.get('view')) setView(s.defaultView);
+        if (s?.defaultCity && !searchParams.get('city')) {
+          setActiveFilters(prev => ({
+            ...(prev || { query: '', eventTypes: [], dateRange: { start: '', end: '' }, location: { city: '', radius: 25 }, price: { min: 0, max: 1000 }, tags: [] }),
+            location: { city: s.defaultCity, radius: s.defaultRadius || 25 }
+          }));
+        }
+      }
+    } catch {}
+
+    const viewParam = searchParams.get('view') as 'events' | 'holidays' | 'map' | 'favorites' | null;
     const typesParam = searchParams.get('types');
     const cityParam = searchParams.get('city');
     const radiusParam = searchParams.get('radius');
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
+    const qParam = searchParams.get('q');
+    const favParam = searchParams.get('fav');
 
-    if (viewParam && ['events', 'holidays', 'map'].includes(viewParam)) {
+    if (viewParam && ['events', 'holidays', 'map', 'favorites'].includes(viewParam)) {
       setView(viewParam);
     }
 
@@ -88,9 +163,9 @@ const Dashboard: React.FC = () => {
       setSelectedEventTypes(t);
     }
 
-    if (cityParam || startParam || endParam || radiusParam) {
+    if (cityParam || startParam || endParam || radiusParam || qParam) {
       setActiveFilters({
-        query: '',
+        query: qParam || '',
         eventTypes: typesParam ? typesParam.split(',').filter(Boolean) : [],
         dateRange: { start: startParam || '', end: endParam || '' },
         location: { city: cityParam || '', radius: radiusParam ? Number(radiusParam) : 25 },
@@ -98,6 +173,7 @@ const Dashboard: React.FC = () => {
         tags: []
       });
     }
+    if (favParam === '1') setOnlyFavorites(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -107,13 +183,15 @@ const Dashboard: React.FC = () => {
     params.view = view;
     if (selectedEventTypes.length > 0) params.types = selectedEventTypes.join(',');
     if (activeFilters) {
+      if (activeFilters.query) params.q = activeFilters.query;
       if (activeFilters.location.city) params.city = activeFilters.location.city;
       if (activeFilters.location.radius) params.radius = String(activeFilters.location.radius);
       if (activeFilters.dateRange.start) params.start = activeFilters.dateRange.start;
       if (activeFilters.dateRange.end) params.end = activeFilters.dateRange.end;
     }
+    if (onlyFavorites) params.fav = '1';
     setSearchParams(params);
-  }, [view, selectedEventTypes, activeFilters, setSearchParams]);
+  }, [view, selectedEventTypes, activeFilters, setSearchParams, onlyFavorites]);
 
   // Simple frontend validation to hide obviously bad events
   const isValidEvent = (ev: Event): boolean => {
@@ -153,6 +231,15 @@ const Dashboard: React.FC = () => {
 
   const filteredEvents = useMemo(() => {
     let list = allEvents;
+    // text query
+    if (activeFilters && activeFilters.query) {
+      const q = activeFilters.query.toLowerCase();
+      list = list.filter(ev =>
+        (ev.title || '').toLowerCase().includes(q) ||
+        (ev.description || '').toLowerCase().includes(q) ||
+        (ev.location_name || '').toLowerCase().includes(q)
+      );
+    }
     // event types
     if (selectedEventTypes && selectedEventTypes.length > 0) {
       list = list.filter(ev => selectedEventTypes.includes(ev.event_type));
@@ -185,8 +272,13 @@ const Dashboard: React.FC = () => {
         });
       }
     }
+    // favorites-only filter
+    if (onlyFavorites) {
+      const favIds = new Set<number>(getFavorites());
+      list = list.filter(ev => favIds.has(ev.id));
+    }
     return list;
-  }, [allEvents, selectedEventTypes, activeFilters, CITY_CENTERS]);
+  }, [allEvents, selectedEventTypes, activeFilters, CITY_CENTERS, onlyFavorites]);
 
   // Export CSV for current filtered events
   const exportFilteredAsCSV = () => {
@@ -221,6 +313,8 @@ const Dashboard: React.FC = () => {
     return m;
   }, [allEvents, filteredEvents, selectedEventTypes]);
 
+  const recurringMap = useMemo(() => detectRecurring(allEvents), [allEvents]);
+
   return (
     <div className="p-6 max-w-6xl mx-auto font-sans">
       {/* Top Navigation */}
@@ -247,13 +341,80 @@ const Dashboard: React.FC = () => {
           }>
             Map
           </button>
-           <button onClick={exportFilteredAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600">
+          <button aria-pressed={view==='favorites'} aria-label="Show favorites view" onClick={() => setView('favorites')} className={
+            `px-3 py-1 rounded ${view === 'favorites' ? 'bg-blue-500 text-white font-semibold' : 'bg-gray-200 text-gray-700'}`
+          }>
+            Favorites
+          </button>
+              <button aria-label="Open settings" onClick={() => setSettingsOpen(true)} className="px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">Settings</button>
+            <button onClick={exportFilteredAsCSV} className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600">
              Export CSV
            </button>
-           <button onClick={() => downloadICS(filteredEvents, 'eventpulse_filtered.ics', 'EventPulse NC - Filtered')}
+            <button onClick={() => downloadICS(filteredEvents, 'eventpulse_filtered.ics', 'EventPulse NC - Filtered')}
              className="px-3 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600">
              Export ICS
            </button>
+            <a
+              href={(function(){
+                const base = `${process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com'}/api/events.csv`;
+                const params = new URLSearchParams();
+                if (selectedEventTypes.length > 0) params.set('event_type', selectedEventTypes[0]);
+                if (activeFilters?.query) params.set('search', activeFilters.query);
+                if (activeFilters?.dateRange?.start) {
+                  try { params.set('year', String(new Date(activeFilters.dateRange.start).getFullYear())); } catch {}
+                }
+                const qs = params.toString();
+                return qs ? `${base}?${qs}` : base;
+              })()}
+              className="px-3 py-1 rounded bg-green-700 text-white hover:bg-green-800"
+              target="_blank" rel="noreferrer"
+            >Download CSV</a>
+            <a
+              href={(function(){
+                const base = `${process.env.REACT_APP_API_URL || 'https://eventpulse-nc-backend-ea4ecf265b40.herokuapp.com'}/api/events.ics`;
+                const params = new URLSearchParams();
+                if (selectedEventTypes.length > 0) params.set('event_type', selectedEventTypes[0]);
+                if (activeFilters?.query) params.set('search', activeFilters.query);
+                if (activeFilters?.dateRange?.start) {
+                  try { params.set('year', String(new Date(activeFilters.dateRange.start).getFullYear())); } catch {}
+                }
+                const qs = params.toString();
+                return qs ? `${base}?${qs}` : base;
+              })()}
+              className="px-3 py-1 rounded bg-purple-500 text-white hover:bg-purple-600"
+              target="_blank" rel="noreferrer"
+            >Subscribe ICS</a>
+            <div className="relative inline-block">
+              <button
+                onClick={() => setSavedViewsMenuOpen(v => !v)}
+                className="px-3 py-1 rounded bg-teal-600 text-white hover:bg-teal-700"
+              >Saved Views</button>
+              {savedViewsMenuOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded shadow-lg z-10 p-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-700">Saved Views</span>
+                    <button onClick={saveCurrentView} className="text-xs px-2 py-1 rounded bg-blue-500 text-white">Save Current</button>
+                  </div>
+                  <div className="max-h-64 overflow-auto space-y-1">
+                    {getSavedViews().length === 0 && (
+                      <div className="text-xs text-gray-500">No saved views yet.</div>
+                    )}
+                    {getSavedViews().map((sv) => (
+                      <div key={sv.name} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded p-2">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-800 truncate">{sv.name}</div>
+                          <div className="text-xs text-gray-500 truncate">{sv.view} • {sv.selectedEventTypes.join(', ') || 'all types'}{sv.onlyFavorites ? ' • favorites' : ''}</div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button onClick={() => loadSavedView(sv)} className="text-xs px-2 py-1 rounded bg-green-500 text-white">Load</button>
+                          <button onClick={() => deleteSavedView(sv.name)} className="text-xs px-2 py-1 rounded bg-red-500 text-white">Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
            <button
              onClick={() => { navigator.clipboard?.writeText(window.location.href); }}
              className="px-3 py-1 rounded bg-gray-800 text-white hover:bg-black"
@@ -261,6 +422,22 @@ const Dashboard: React.FC = () => {
            >Share</button>
         </div>
       </nav>
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setSettingsOpen(false)} />
+          <div className="relative bg-white rounded-lg shadow p-4 w-full max-w-md">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold">Settings</div>
+              <button onClick={() => setSettingsOpen(false)} className="text-sm text-gray-600">Close</button>
+            </div>
+            <SettingsPanel onSave={(s) => {
+              localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+              setSettingsOpen(false);
+            }} />
+          </div>
+        </div>
+      )}
       {/* Tagline */}
       <p className="text-center text-gray-600 mb-8">
         Never Miss What Matters in North Carolina
@@ -282,15 +459,10 @@ const Dashboard: React.FC = () => {
           />
           <div className="flex items-center justify-center gap-4">
             <button
-              onClick={() => {
-                // show only favorites
-                const favIds = (JSON.parse(localStorage.getItem('eventpulse_favorites_v1') || '[]') as number[]);
-                if (favIds.length === 0) return;
-                const favTypes = Array.from(new Set(allEvents.filter(e => favIds.includes(e.id)).map(e => e.event_type)));
-                setSelectedEventTypes(favTypes);
-              }}
-              className="px-3 py-1 rounded bg-yellow-100 text-yellow-800 text-sm"
-            >Show Favorites</button>
+              onClick={() => setOnlyFavorites(v => !v)}
+              className={`px-3 py-1 rounded text-sm ${onlyFavorites ? 'bg-yellow-400 text-yellow-900' : 'bg-yellow-100 text-yellow-800'}`}
+              aria-pressed={onlyFavorites}
+            >{onlyFavorites ? 'Showing Favorites' : 'Only Favorites'}</button>
           </div>
           <div className="flex flex-col md:flex-row gap-4">
             <div className="md:w-1/3 space-y-3">
@@ -352,7 +524,7 @@ const Dashboard: React.FC = () => {
             </ul>
           </div>
         </div>
-      ) : (
+      ) : view === 'map' ? (
         <div className="space-y-6">
           <AdvancedSearch
             onSearch={handleSearch}
@@ -399,6 +571,25 @@ const Dashboard: React.FC = () => {
           ) : (
             <NCMap events={filteredEvents} mode={mapMode} />
           )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="mb-2 text-sm text-gray-600">Favorited events</div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {filteredEvents.filter(ev => getFavorites().includes(ev.id)).map(ev => (
+              <Link key={ev.id} to={`#/event/${ev.id}`} className="block border border-gray-200 rounded p-3 hover:shadow">
+                <div className="text-sm font-semibold text-gray-900 truncate">{ev.title}</div>
+                <div className="text-xs text-gray-500 truncate">{new Date(ev.start_date).toLocaleString()} • {ev.location_name}</div>
+                <div className="text-xs text-gray-600 mt-1">{ev.event_type}</div>
+                {recurringMap.has(ev.id) && (
+                  <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-[10px]">Recurring</div>
+                )}
+              </Link>
+            ))}
+            {filteredEvents.filter(ev => getFavorites().includes(ev.id)).length === 0 && (
+              <div className="text-sm text-gray-500">No favorites yet. Mark events as ★ Favorite from the event page.</div>
+            )}
+          </div>
         </div>
       )}
       {/* no modal: use separate page for day events */}

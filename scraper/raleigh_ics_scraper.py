@@ -1,7 +1,7 @@
 # scraper/raleigh_ics_scraper.py
 
 from ics_scrapers import ICSUtils
-from post_event import post_event
+from api_client import batch_post
 
 class RaleighICSScraper:
     def __init__(self):
@@ -22,5 +22,6 @@ class RaleighICSScraper:
             lon=self.lon,
             event_type=self.event_type
         )
-        for ev in events:
-            post_event(ev)
+        if events:
+            stats = batch_post(events)
+            print("Raleigh ICS batch:", stats)

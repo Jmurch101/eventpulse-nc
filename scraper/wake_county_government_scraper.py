@@ -1,7 +1,7 @@
 # scraper/wake_county_government_scraper.py
 
 from base_scraper import BaseScraper
-from post_event import post_event
+from api_client import batch_post
 from bs4 import BeautifulSoup
 from dateutil import parser
 from datetime import timedelta
@@ -115,5 +115,7 @@ class WakeCountyGovernmentScraper(BaseScraper):
         return events
 
     def run_and_post(self):
-        for e in self.run():
-            post_event(e) 
+        events = self.run()
+        if events:
+            stats = batch_post(events)
+            print("Wake County batch:", stats)

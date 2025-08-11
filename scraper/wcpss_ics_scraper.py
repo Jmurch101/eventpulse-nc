@@ -1,7 +1,7 @@
 # scraper/wcpss_ics_scraper.py
 
 from ics_scrapers import ICSUtils
-from post_event import post_event
+from api_client import batch_post
 from urllib.parse import quote
 
 class WCPSSICSScraper:
@@ -37,5 +37,6 @@ class WCPSSICSScraper:
             lon=self.lon,
             event_type=self.event_type
         )
-        for ev in events:
-            post_event(ev)
+        if events:
+            stats = batch_post(events)
+            print("WCPSS ICS batch:", stats)
