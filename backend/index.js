@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const db = require('./db');
 const rateLimit = require('express-rate-limit');
+const qs = require('querystring');
+const { exec } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -80,6 +82,118 @@ app.get('/api/events', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ICS export for filtered events
+const buildIcsAndSend = (req, res) => {
+  try {
+    const { event_type, search, year, limit = 1000, offset = 0 } = req.query;
+    let query = 'SELECT * FROM events WHERE 1=1';
+    const params = [];
+    if (event_type) { query += ' AND event_type = ?'; params.push(event_type); }
+    if (search) { 
+      query += ' AND (title LIKE ? OR description LIKE ? OR location_name LIKE ?)';
+      const s = `%${search}%`; params.push(s, s, s);
+    }
+    if (year) { query += ' AND start_date LIKE ?'; params.push(`${year}-%`); }
+    query += ' ORDER BY start_date DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).send('Internal error');
+      }
+      const toICSDate = (iso) => {
+        const d = new Date(iso);
+        const pad = (n) => String(n).padStart(2, '0');
+        return (
+          d.getUTCFullYear().toString() +
+          pad(d.getUTCMonth() + 1) +
+          pad(d.getUTCDate()) + 'T' +
+          pad(d.getUTCHours()) +
+          pad(d.getUTCMinutes()) +
+          pad(d.getUTCSeconds()) + 'Z'
+        );
+      };
+      const esc = (s) => (s || '').toString().replace(/\n/g, ' ');
+      const lines = [];
+      lines.push('BEGIN:VCALENDAR');
+      lines.push('VERSION:2.0');
+      lines.push('PRODID:-//EventPulse NC//EN');
+      lines.push('X-WR-CALNAME:EventPulse NC');
+      rows.forEach((ev) => {
+        lines.push('BEGIN:VEVENT');
+        lines.push(`UID:eventpulse-${ev.id}@eventpulse-nc`);
+        lines.push(`DTSTAMP:${toICSDate(new Date().toISOString())}`);
+        lines.push(`DTSTART:${toICSDate(ev.start_date)}`);
+        lines.push(`DTEND:${toICSDate(ev.end_date)}`);
+        lines.push(`SUMMARY:${esc(ev.title)}`);
+        if (ev.description) lines.push(`DESCRIPTION:${esc(ev.description)}`);
+        if (ev.location_name) lines.push(`LOCATION:${esc(ev.location_name)}`);
+        if (ev.source_url) lines.push(`URL:${esc(ev.source_url)}`);
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      const body = lines.join('\r\n');
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="eventpulse_export.ics"');
+      res.send(body);
+    });
+  } catch (error) {
+    console.error('ICS export error:', error);
+    res.status(500).send('Internal server error');
+  }
+};
+
+// Support both dotted and path-style ICS endpoints
+app.get('/api/events.ics', buildIcsAndSend);
+app.get('/api/events/ics', buildIcsAndSend);
+
+// CSV export for filtered events
+const buildCsvAndSend = (req, res) => {
+  try {
+    const { event_type, search, year, limit = 1000, offset = 0 } = req.query;
+    let query = 'SELECT * FROM events WHERE 1=1';
+    const params = [];
+    if (event_type) { query += ' AND event_type = ?'; params.push(event_type); }
+    if (search) {
+      query += ' AND (title LIKE ? OR description LIKE ? OR location_name LIKE ?)';
+      const s = `%${search}%`; params.push(s, s, s);
+    }
+    if (year) { query += ' AND start_date LIKE ?'; params.push(`${year}-%`); }
+    query += ' ORDER BY start_date DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
+
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error('Database error:', err);
+        return res.status(500).send('Internal error');
+      }
+      const headers = [
+        'id','title','description','start_date','end_date','location_name','latitude','longitude','organization_id','event_type','source_url','created_at'
+      ];
+      const esc = (v) => {
+        const s = (v === null || v === undefined) ? '' : String(v);
+        return '"' + s.replace(/"/g, '""') + '"';
+      };
+      const lines = [];
+      lines.push(headers.join(','));
+      for (const r of rows) {
+        lines.push(headers.map(h => esc(r[h])).join(','));
+      }
+      const body = lines.join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="eventpulse_export.csv"');
+      res.send(body);
+    });
+  } catch (error) {
+    console.error('CSV export error:', error);
+    res.status(500).send('Internal server error');
+  }
+};
+
+app.get('/api/events.csv', buildCsvAndSend);
+app.get('/api/events/csv', buildCsvAndSend);
 
 // Event Statistics Endpoint (MUST come before /api/events/:id)
 app.get('/api/events/stats', async (req, res) => {
@@ -190,7 +304,7 @@ app.post('/api/events', async (req, res) => {
       return res.status(400).json({ error: 'End time must be after start time' });
     }
     const FOURTEEN_HOURS = 14 * 60 * 60 * 1000;
-    if (endMs - startMs > FOURTEEN_HOURS) {
+    if ((event_type !== 'holiday') && (endMs - startMs > FOURTEEN_HOURS)) {
       ingestStats.reasons.too_long++;
       return res.status(400).json({ error: 'Event duration exceeds 14 hours' });
     }
@@ -286,7 +400,7 @@ app.post('/api/events/batch', async (req, res) => {
       if (!Number.isFinite(sMs)) { failed++; ingestStats.reasons.invalid_date++; return resolve(); }
       if (!Number.isFinite(eMs)) { failed++; ingestStats.reasons.invalid_date++; return resolve(); }
       if (eMs <= sMs) { failed++; ingestStats.reasons.invalid_order++; return resolve(); }
-      if ((eMs - sMs) > (14*60*60*1000)) { failed++; ingestStats.reasons.too_long++; return resolve(); }
+      if (e.event_type !== 'holiday' && (eMs - sMs) > (14*60*60*1000)) { failed++; ingestStats.reasons.too_long++; return resolve(); }
 
       // Validate coordinates if present
       const latOkB = latitude === undefined || (Number.isFinite(Number(latitude)) && Math.abs(Number(latitude)) <= 90);
@@ -795,4 +909,24 @@ app.listen(PORT, () => {
   console.log(`🚀 EventPulse NC Backend running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`📚 API docs: http://localhost:${PORT}/api/events`);
+  // Lightweight daily scheduler (disabled by default)
+  if (process.env.RUN_SCHEDULER === 'true') {
+    const EVERY_24H_MS = 24 * 60 * 60 * 1000;
+    const runScrapers = () => {
+      console.log('🕒 Scheduler: starting scraper run...');
+      exec('cd ../scraper && export API_URL="http://localhost:3001" && source .venv/bin/activate && python run_all_scrapers.py', (err, stdout, stderr) => {
+        if (err) {
+          console.error('Scheduler error running scrapers:', err?.message || err);
+        }
+        if (stdout) console.log('Scraper output:', stdout.substring(0, 2000));
+        if (stderr) console.error('Scraper stderr:', stderr.substring(0, 2000));
+      });
+    };
+    // Start after 1 minute, then every 24h
+    setTimeout(() => {
+      runScrapers();
+      setInterval(runScrapers, EVERY_24H_MS);
+    }, 60 * 1000);
+    console.log('⏱️  Scheduler enabled (RUN_SCHEDULER=true). Daily scraper will run.');
+  }
 });
